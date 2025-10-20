@@ -5,9 +5,15 @@ description = "A bootstrap Python project using Poetry and Pytest"
 authors = ["Jules <you@example.com>"]
 license = "MIT"
 readme = "README.md"
+packages = [
+    { include = "schedule_retriever" },
+    { include = "database_handler" },
+]
 
 [tool.poetry.dependencies]
 python = "^3.12"
+ics = "^0.7"
+requests = "^2.28.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
