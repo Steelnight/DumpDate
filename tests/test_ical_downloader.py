@@ -1,15 +1,19 @@
+import os
+from datetime import date
+from unittest.mock import Mock, patch
+
 import pytest
 import requests
-from unittest.mock import patch, Mock
-from datetime import date
-import os
+
 from schedule_parser.ical_downloader import download_ical_file
+
 
 @pytest.fixture
 def mock_requests_get():
     """Fixture to mock requests.get."""
-    with patch('requests.get') as mock_get:
+    with patch("requests.get") as mock_get:
         yield mock_get
+
 
 def test_download_ical_file_success(mock_requests_get):
     """Test that the iCal file is downloaded and a path is returned."""
@@ -26,12 +30,13 @@ def test_download_ical_file_success(mock_requests_get):
 
     assert file_path is not None
     assert os.path.exists(file_path)
-    with open(file_path, 'r') as f:
+    with open(file_path, "r") as f:
         assert f.read() == "BEGIN:VCALENDAR..."
 
     # Clean up the created temp file
     if file_path:
         os.remove(file_path)
+
 
 def test_download_ical_file_http_error(mock_requests_get):
     """Test that None is returned on an HTTP error."""

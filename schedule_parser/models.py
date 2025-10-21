@@ -1,8 +1,14 @@
-from dataclasses import dataclass
+"""
+This module defines the data models for the waste schedule parser.
+"""
 import hashlib
+from dataclasses import dataclass
+
 
 @dataclass
 class WasteEvent:
+    """Represents a single waste collection event."""
+
     uid: str
     date: str
     location: str

@@ -1,13 +1,29 @@
+import sqlite3
+
 from schedule_parser.db_manager import init_db, upsert_event
 from schedule_parser.models import WasteEvent
-import sqlite3
+
 
 def test_insert_and_dedup(tmp_path):
     db_file = tmp_path / "test.db"
     init_db(db_path=db_file)
-    e1 = WasteEvent("uid1", "2024-05-15", "Musterweg 123", "Bio-Tonne", "Sauber- & Entsorgungs-AG", "0123-456789")
+    e1 = WasteEvent(
+        "uid1",
+        "2024-05-15",
+        "Musterweg 123",
+        "Bio-Tonne",
+        "Sauber- & Entsorgungs-AG",
+        "0123-456789",
+    )
     upsert_event(e1, db_path=db_file)
-    e2 = WasteEvent("uid2", "2024-05-15", "Musterweg 123", "Bio-Tonne", "Sauber- & Entsorgungs-AG", "0123-456789")
+    e2 = WasteEvent(
+        "uid2",
+        "2024-05-15",
+        "Musterweg 123",
+        "Bio-Tonne",
+        "Sauber- & Entsorgungs-AG",
+        "0123-456789",
+    )
     upsert_event(e2, db_path=db_file)
     conn = sqlite3.connect(db_file)
     cur = conn.cursor()
@@ -16,13 +32,23 @@ def test_insert_and_dedup(tmp_path):
     conn.close()
     assert count == 1  # identical hash, different UID should not insert
 
+
 def test_insert_and_update(tmp_path):
     db_file = tmp_path / "test.db"
     init_db(db_path=db_file)
-    e1 = WasteEvent("uid1", "2024-05-15", "Musterweg 123", "Bio-Tonne", "Sauber- & Entsorgungs-AG", "0123-456789")
+    e1 = WasteEvent(
+        "uid1",
+        "2024-05-15",
+        "Musterweg 123",
+        "Bio-Tonne",
+        "Sauber- & Entsorgungs-AG",
+        "0123-456789",
+    )
     upsert_event(e1, db_path=db_file)
 
-    e1_updated = WasteEvent("uid1", "2024-05-15", "Musterweg 123", "Bio-Tonne", "UPDATED", "0123-456789")
+    e1_updated = WasteEvent(
+        "uid1", "2024-05-15", "Musterweg 123", "Bio-Tonne", "UPDATED", "0123-456789"
+    )
     upsert_event(e1_updated, db_path=db_file)
 
     conn = sqlite3.connect(db_file)

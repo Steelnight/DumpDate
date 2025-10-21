@@ -1,15 +1,24 @@
+"""
+This module provides a facade for the schedule_parser library.
+
+It orchestrates the process of fetching, parsing, and storing waste schedules.
+"""
 import logging
 import os
 from datetime import date
+
 from .address_finder import get_address_id
+from .db_manager import init_db, upsert_event
 from .ical_downloader import download_ical_file
 from .ics_parser import parse_ics
-from .db_manager import init_db, upsert_event
 
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
 
-def get_schedule_for_address(address: str, start_date: date, end_date: date, db_path: str = "waste_schedule.db"):
+
+def get_schedule_for_address(
+    address: str, start_date: date, end_date: date, db_path: str = "waste_schedule.db"
+) -> None:
     """
     Orchestrates the process of fetching, parsing, and storing waste schedules.
 
@@ -26,12 +35,14 @@ def get_schedule_for_address(address: str, start_date: date, end_date: date, db_
         # 2. Download iCal file
         ical_file_path = download_ical_file(address_id, start_date, end_date)
         if ical_file_path is None:
-            logger.error(f"Could not download iCal file for address ID {address_id}. Aborting.")
+            logger.error(
+                f"Could not download iCal file for address ID {address_id}. Aborting."
+            )
             return
 
         # 3. Parse the iCal file
         try:
-            with open(ical_file_path, 'r', encoding='utf-8') as f:
+            with open(ical_file_path, "r", encoding="utf-8") as f:
                 ics_text = f.read()
 
             waste_events = parse_ics(ics_text)
@@ -41,7 +52,9 @@ def get_schedule_for_address(address: str, start_date: date, end_date: date, db_
             init_db(db_path)
             for event in waste_events:
                 upsert_event(event, db_path)
-            logger.info(f"Successfully stored {len(waste_events)} events in the database at {db_path}.")
+            logger.info(
+                f"Successfully stored {len(waste_events)} events in the database at {db_path}."
+            )
 
         finally:
             # 5. Clean up the temporary file

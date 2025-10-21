@@ -1,11 +1,19 @@
-import requests
+"""
+This module provides functionality for finding the address ID for a given address.
+
+It uses the Dresden OGC API to fetch the address data.
+"""
 import logging
-from typing import Optional
+
+import requests
 
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
 
-ADDRESS_API_URL = "https://kommisdd.dresden.de/net4/public/ogcapi/collections/L134/items?limit=100000"
+ADDRESS_API_URL = (
+    "https://kommisdd.dresden.de/net4/public/ogcapi/collections/L134/items?limit=100000"
+)
+
 
 def get_address_id(address: str) -> int:
     """
@@ -26,12 +34,24 @@ def get_address_id(address: str) -> int:
         response.raise_for_status()
         data = response.json()
 
-        for feature in data.get("features", []):
-            properties = feature.get("properties", {})
-            if properties.get("adresse", "").lower() == address.lower():
-                address_id = properties.get("id")
-                logger.info(f"Found address ID {address_id} for address '{address}'")
-                return address_id
+        features = data.get("features", [])
+
+        found_address = next(
+            (
+                feature["properties"]
+                for feature in features
+                if feature.get("properties", {})
+                .get("adresse", "")
+                .lower()
+                == address.lower()
+            ),
+            None,
+        )
+
+        if found_address:
+            address_id = found_address["id"]
+            logger.info(f"Found address ID {address_id} for address '{address}'")
+            return address_id
 
         logger.warning(f"No exact match found for address: {address}")
         raise ValueError(f"Address not found: {address}")

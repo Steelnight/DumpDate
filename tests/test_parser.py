@@ -1,10 +1,13 @@
 import pytest
+
 from schedule_parser.ics_parser import parse_ics
+
 
 @pytest.fixture
 def sample_ics():
     with open("tests/sample.ics", "r") as f:
         return f.read()
+
 
 def test_parse_events(sample_ics):
     events = parse_ics(sample_ics)
