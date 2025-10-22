@@ -1,54 +1,49 @@
-from unittest.mock import Mock, patch
-
+import sqlite3
 import pytest
+from unittest.mock import patch
 
 from schedule_parser.address_finder import get_address_id
 
-
 @pytest.fixture
-def mock_requests_get():
-    """Fixture to mock requests.get."""
-    with patch("requests.get") as mock_get:
-        yield mock_get
+def temp_db(tmp_path):
+    """Fixture to create a temporary database for testing."""
+    db_path = tmp_path / "test_address.db"
 
+    conn = sqlite3.connect(db_path)
+    cursor = conn.cursor()
+    cursor.execute("""
+        CREATE TABLE addresses (
+            address TEXT PRIMARY KEY,
+            address_id INTEGER NOT NULL
+        )
+    """)
+    cursor.execute("INSERT INTO addresses VALUES (?, ?)", ("chemnitzer straße 42", 54321))
+    cursor.execute("INSERT INTO addresses VALUES (?, ?)", ("test straße 1", 12345))
+    conn.commit()
+    conn.close()
 
-def test_get_address_id_success(mock_requests_get):
+    # Patch the DB_FILE global in the address_finder module to use our temp DB
+    with patch("schedule_parser.address_finder.DB_FILE", db_path):
+        yield db_path
+
+def test_get_address_id_success(temp_db):
     """Test that the correct ID is returned for a valid address."""
-    mock_response = Mock()
-    mock_response.json.return_value = {
-        "features": [
-            {"properties": {"id": 12345, "adresse": "Test Straße 1"}},
-            {"properties": {"id": 54321, "adresse": "Chemnitzer Straße 42"}},
-        ]
-    }
-    mock_response.raise_for_status.return_value = None
-    mock_requests_get.return_value = mock_response
-
     address_id = get_address_id("Chemnitzer Straße 42")
     assert address_id == 54321
 
-
-def test_get_address_id_not_found(mock_requests_get):
+def test_get_address_id_not_found(temp_db):
     """Test that a ValueError is raised for an address that is not found."""
-    mock_response = Mock()
-    mock_response.json.return_value = {
-        "features": [{"properties": {"id": 12345, "adresse": "Test Straße 1"}}]
-    }
-    mock_response.raise_for_status.return_value = None
-    mock_requests_get.return_value = mock_response
-
     with pytest.raises(ValueError, match="Address not found: Nonexistent Straße 99"):
         get_address_id("Nonexistent Straße 99")
 
-
-def test_get_address_id_case_insensitive(mock_requests_get):
+def test_get_address_id_case_insensitive(temp_db):
     """Test that address matching is case-insensitive."""
-    mock_response = Mock()
-    mock_response.json.return_value = {
-        "features": [{"properties": {"id": 54321, "adresse": "Chemnitzer Straße 42"}}]
-    }
-    mock_response.raise_for_status.return_value = None
-    mock_requests_get.return_value = mock_response
-
     address_id = get_address_id("chemnitzer straße 42")
     assert address_id == 54321
+
+def test_get_address_id_db_not_found():
+    """Test that FileNotFoundError is raised if the DB file doesn't exist."""
+    # We patch the DB_FILE to a non-existent path
+    with patch("schedule_parser.address_finder.DB_FILE", "non_existent_db.db"):
+        with pytest.raises(FileNotFoundError):
+            get_address_id("any address")

@@ -19,7 +19,7 @@ waste_type_pattern = re.compile(
 contact_pattern = re.compile(r"durch (.*?),\s*Kontakt:\s*([\d\s\/\+()-]+?)\)")
 
 
-def parse_ics(ics_text: str) -> list[WasteEvent]:
+def parse_ics(ics_text: str, original_address: str) -> list[WasteEvent]:
     """Parse an ICS file and return a list of WasteEvent objects."""
     events = []
     try:
@@ -79,6 +79,7 @@ def parse_ics(ics_text: str) -> list[WasteEvent]:
                     waste_type=waste_type,
                     contact_name=contact_name,
                     contact_phone=contact_phone,
+                    original_address=original_address,
                 )
             )
         except Exception as e:

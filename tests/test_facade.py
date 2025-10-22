@@ -34,6 +34,7 @@ def mock_ics_parser():
                 waste_type="Restmüll",
                 contact_name="",
                 contact_phone="",
+                original_address="Test",
             )
         ]
         yield mock_parse

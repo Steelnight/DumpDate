@@ -14,6 +14,7 @@ def test_insert_and_dedup(tmp_path):
         "Bio-Tonne",
         "Sauber- & Entsorgungs-AG",
         "0123-456789",
+        original_address="Musterweg 123",
     )
     upsert_event(e1, db_path=db_file)
     e2 = WasteEvent(
@@ -23,6 +24,7 @@ def test_insert_and_dedup(tmp_path):
         "Bio-Tonne",
         "Sauber- & Entsorgungs-AG",
         "0123-456789",
+        original_address="Musterweg 123",
     )
     upsert_event(e2, db_path=db_file)
     conn = sqlite3.connect(db_file)
@@ -43,11 +45,18 @@ def test_insert_and_update(tmp_path):
         "Bio-Tonne",
         "Sauber- & Entsorgungs-AG",
         "0123-456789",
+        original_address="Musterweg 123",
     )
     upsert_event(e1, db_path=db_file)
 
     e1_updated = WasteEvent(
-        "uid1", "2024-05-15", "Musterweg 123", "Bio-Tonne", "UPDATED", "0123-456789"
+        "uid1",
+        "2024-05-15",
+        "Musterweg 123",
+        "Bio-Tonne",
+        "UPDATED",
+        "0123-456789",
+        original_address="Musterweg 123",
     )
     upsert_event(e1_updated, db_path=db_file)
 

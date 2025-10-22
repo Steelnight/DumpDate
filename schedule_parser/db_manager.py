@@ -22,7 +22,8 @@ def init_db(db_path: str = "waste_schedule.db") -> None:
             waste_type TEXT,
             contact_name TEXT,
             contact_phone TEXT,
-            hash TEXT
+            hash TEXT,
+            original_address TEXT
         )
     """
     )
@@ -45,7 +46,7 @@ def upsert_event(event: WasteEvent, db_path: str = "waste_schedule.db") -> None:
             cur.execute(
                 """
                 UPDATE waste_events
-                SET date=?, location=?, waste_type=?, contact_name=?, contact_phone=?, hash=?
+                SET date=?, location=?, waste_type=?, contact_name=?, contact_phone=?, hash=?, original_address=?
                 WHERE uid=?
             """,
                 (
@@ -55,6 +56,7 @@ def upsert_event(event: WasteEvent, db_path: str = "waste_schedule.db") -> None:
                     event.contact_name,
                     event.contact_phone,
                     event_hash,
+                    event.original_address,
                     event.uid,
                 ),
             )
@@ -64,8 +66,8 @@ def upsert_event(event: WasteEvent, db_path: str = "waste_schedule.db") -> None:
         if not cur.fetchone():
             cur.execute(
                 """
-                INSERT INTO waste_events (uid, date, location, waste_type, contact_name, contact_phone, hash)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO waste_events (uid, date, location, waste_type, contact_name, contact_phone, hash, original_address)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     event.uid,
@@ -75,6 +77,7 @@ def upsert_event(event: WasteEvent, db_path: str = "waste_schedule.db") -> None:
                     event.contact_name,
                     event.contact_phone,
                     event_hash,
+                    event.original_address,
                 ),
             )
     conn.commit()

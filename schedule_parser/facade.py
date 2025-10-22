@@ -45,7 +45,7 @@ def get_schedule_for_address(
             with open(ical_file_path, "r", encoding="utf-8") as f:
                 ics_text = f.read()
 
-            waste_events = parse_ics(ics_text)
+            waste_events = parse_ics(ics_text, address)
             logger.info(f"Parsed {len(waste_events)} events from the iCal file.")
 
             # 4. Initialize DB and store events

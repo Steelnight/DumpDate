@@ -10,7 +10,7 @@ def sample_ics():
 
 
 def test_parse_events(sample_ics):
-    events = parse_ics(sample_ics)
+    events = parse_ics(sample_ics, "Test Address")
     assert len(events) == 7
 
     # Test the first event in detail
