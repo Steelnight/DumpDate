@@ -1,15 +1,26 @@
-import requests
+"""
+This module provides functionality for downloading iCal files.
+
+It uses the Dresden iCal API to fetch the iCal files.
+"""
 import logging
 import tempfile
 from datetime import date
 from typing import Optional
 
+import requests
+
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
 
-ICAL_API_URL = "https://stadtplan.dresden.de/project/cardo3Apps/IDU_DDStadtplan/abfall/ical.ashx"
+ICAL_API_URL = (
+    "https://stadtplan.dresden.de/project/cardo3Apps/IDU_DDStadtplan/abfall/ical.ashx"
+)
 
-def download_ical_file(standort_id: int, start_date: date, end_date: date) -> Optional[str]:
+
+def download_ical_file(
+    standort_id: int, start_date: date, end_date: date
+) -> Optional[str]:
     """
     Downloads the iCal file for a given location and date range.
 
@@ -23,8 +34,8 @@ def download_ical_file(standort_id: int, start_date: date, end_date: date) -> Op
     """
     params = {
         "STANDORT": standort_id,
-        "DATUM_VON": start_date.strftime('%d.%m.%Y'),
-        "DATUM_BIS": end_date.strftime('%d.%m.%Y'),
+        "DATUM_VON": start_date.strftime("%d.%m.%Y"),
+        "DATUM_BIS": end_date.strftime("%d.%m.%Y"),
     }
 
     try:
@@ -32,7 +43,9 @@ def download_ical_file(standort_id: int, start_date: date, end_date: date) -> Op
         response.raise_for_status()
 
         # Create a temporary file to store the ICS content
-        with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix=".ics", encoding='utf-8') as temp_file:
+        with tempfile.NamedTemporaryFile(
+            mode="w", delete=False, suffix=".ics", encoding="utf-8"
+        ) as temp_file:
             temp_file.write(response.text)
             file_path = temp_file.name
 

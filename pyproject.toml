@@ -11,9 +11,13 @@ packages = [{include = "schedule_parser"}]
 python = "^3.12"
 icalendar = "^5.0.12"
 requests = "^2.31.0"
+pandas = "^2.3.3"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
+black = "^25.9.0"
+isort = "^7.0.0"
+ruff = "^0.14.1"
 
 [build-system]
 requires = ["poetry-core"]
