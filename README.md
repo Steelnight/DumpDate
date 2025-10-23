@@ -35,4 +35,3 @@ DumpDate is a smart reminder bot that keeps track of the local garbage collectio
 🌍 6. Multi-User / Household Support
 	•	One instance can manage multiple addresses or users.
 	•	Configurable chat mapping per location.
-\n## High-Performance Caching\n\nThis library uses a high-performance SQLite database for address lookups to ensure fast and efficient operation. Before using the library for the first time, you must build the local address cache.\n\nTo do this, run the following command from the root of the project:\n\n```bash\npoetry run python build_cache.py\n```\n\nThis will create an `address_lookup.db` file in the project's root directory. It is recommended to run this command periodically (e.g., once a week or month) to keep the address data up-to-date.
