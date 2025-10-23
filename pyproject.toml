@@ -12,6 +12,9 @@ python = "^3.12"
 icalendar = "^5.0.12"
 requests = "^2.31.0"
 pandas = "^2.3.3"
+python-telegram-bot = "^21.4"
+thefuzz = "^0.22.1"
+python-levenshtein = "^0.25.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"

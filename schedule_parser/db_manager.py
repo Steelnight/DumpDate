@@ -27,6 +27,18 @@ def init_db(db_path: str = "waste_schedule.db") -> None:
         )
     """
     )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            chat_id INTEGER NOT NULL,
+            address_id INTEGER NOT NULL,
+            notification_time TEXT NOT NULL,
+            last_notified DATE,
+            UNIQUE(chat_id, address_id)
+        )
+    """
+    )
     conn.commit()
     conn.close()
 
