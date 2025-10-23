@@ -4,26 +4,27 @@ import logging
 import requests
 import os
 
-# Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from schedule_parser.config import ADDRESS_API_URL, ADDRESS_DB_FILE
+from schedule_parser.database import get_db_connection
 
-ADDRESS_API_URL = "https://kommisdd.dresden.de/net4/public/ogcapi/collections/L134/items?limit=100000"
-DB_FILE = "address_lookup.db"
 
-def build_address_database():
+def build_address_database(db_path: str = ADDRESS_DB_FILE):
     """
     Downloads the full address dataset and populates a SQLite database with
     an indexed address-to-ID lookup table.
 
     This script should be run periodically (e.g., weekly) to keep the
     address data up-to-date.
+
+    Args:
+        db_path: The path to the SQLite database file.
     """
-    logging.info(f"Building address cache database at '{DB_FILE}'...")
+    logging.info(f"Building address cache database at '{db_path}'...")
 
     # Remove the old database file if it exists to ensure a fresh build
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        logging.info(f"Removed existing database file: {DB_FILE}")
+    if os.path.exists(db_path):
+        os.remove(db_path)
+        logging.info(f"Removed existing database file: {db_path}")
 
     logging.info(f"Attempting to download data from: {ADDRESS_API_URL}")
     try:
@@ -51,15 +52,11 @@ def build_address_database():
 
         logging.info(f"Extracted {len(address_data)} address-ID pairs.")
 
-        conn = sqlite3.connect(DB_FILE)
-        cursor = conn.cursor()
-        cursor.execute("CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)")
-        cursor.executemany("INSERT INTO addresses VALUES (?, ?)", address_data)
+        with get_db_connection(db_path) as (conn, cursor):
+            cursor.execute("CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)")
+            cursor.executemany("INSERT INTO addresses VALUES (?, ?)", address_data)
 
-        conn.commit()
-        conn.close()
-
-        logging.info(f"Successfully created and populated address database: {DB_FILE}")
+        logging.info(f"Successfully created and populated address database: {db_path}")
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to download address data: {e}")
@@ -69,4 +66,8 @@ def build_address_database():
         logging.error(f"Database error: {e}")
 
 if __name__ == "__main__":
+    # Configure logging for the script
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     build_address_database()

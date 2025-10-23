@@ -22,28 +22,24 @@ def temp_db(tmp_path):
     conn.commit()
     conn.close()
 
-    # Patch the DB_FILE global in the address_finder module to use our temp DB
-    with patch("schedule_parser.address_finder.DB_FILE", db_path):
-        yield db_path
+    yield db_path
 
 def test_get_address_id_success(temp_db):
     """Test that the correct ID is returned for a valid address."""
-    address_id = get_address_id("Chemnitzer Straße 42")
+    address_id = get_address_id("Chemnitzer Straße 42", db_path=temp_db)
     assert address_id == 54321
 
 def test_get_address_id_not_found(temp_db):
     """Test that a ValueError is raised for an address that is not found."""
     with pytest.raises(ValueError, match="Address not found: Nonexistent Straße 99"):
-        get_address_id("Nonexistent Straße 99")
+        get_address_id("Nonexistent Straße 99", db_path=temp_db)
 
 def test_get_address_id_case_insensitive(temp_db):
     """Test that address matching is case-insensitive."""
-    address_id = get_address_id("chemnitzer straße 42")
+    address_id = get_address_id("chemnitzer straße 42", db_path=temp_db)
     assert address_id == 54321
 
 def test_get_address_id_db_not_found():
     """Test that FileNotFoundError is raised if the DB file doesn't exist."""
-    # We patch the DB_FILE to a non-existent path
-    with patch("schedule_parser.address_finder.DB_FILE", "non_existent_db.db"):
-        with pytest.raises(FileNotFoundError):
-            get_address_id("any address")
+    with pytest.raises(FileNotFoundError):
+        get_address_id("any address", db_path="non_existent_db.db")

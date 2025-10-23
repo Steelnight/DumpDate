@@ -13,9 +13,7 @@ import requests
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
 
-ICAL_API_URL = (
-    "https://stadtplan.dresden.de/project/cardo3Apps/IDU_DDStadtplan/abfall/ical.ashx"
-)
+from .config import ICAL_API_URL
 
 
 def download_ical_file(
