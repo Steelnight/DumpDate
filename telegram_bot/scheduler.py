@@ -71,27 +71,65 @@ async def check_and_send_notifications(bot: Bot) -> None:
         # This function will be implemented in the next step
         await send_bulk_notifications(bot, notification_tasks)
 
+def log_pending_notification(sub_id: int, db_path: str = "waste_schedule.db") -> int:
+    """Logs a pending notification and returns the log ID."""
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT INTO notification_logs (subscription_id, status) VALUES (?, 'pending')",
+        (sub_id,),
+    )
+    log_id = cur.lastrowid
+    conn.commit()
+    conn.close()
+    return log_id
+
+
+def update_notification_log(
+    log_id: int,
+    status: str,
+    error_message: str = None,
+    db_path: str = "waste_schedule.db",
+) -> None:
+    """Updates the status of a notification log."""
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute(
+        "UPDATE notification_logs SET status = ?, error_message = ?, timestamp_sent = CURRENT_TIMESTAMP WHERE id = ?",
+        (status, error_message, log_id),
+    )
+    conn.commit()
+    conn.close()
+
+
 async def send_bulk_notifications(bot: Bot, tasks: list) -> None:
-    """Sends notifications in bulk with rate limiting."""
+    """Sends notifications in bulk with rate limiting and logs the outcomes."""
     chunk_size = 30
     for i in range(0, len(tasks), chunk_size):
         chunk = tasks[i:i + chunk_size]
 
-        # Prepare coroutines for concurrent execution
-        coroutines = []
-        for task in chunk:
-            coroutines.append(send_notification(bot, task["chat_id"], task["message"]))
+        # Log pending notifications and prepare coroutines
+        log_ids = [log_pending_notification(task["sub_id"]) for task in chunk]
+        coroutines = [
+            send_notification(bot, task["chat_id"], task["message"]) for task in chunk
+        ]
 
         # Run send operations concurrently
         results = await asyncio.gather(*coroutines, return_exceptions=True)
 
-        # Process results and update database for successful sends
-        for task, result in zip(chunk, results):
+        # Process results and update logs/database
+        for task, log_id, result in zip(chunk, log_ids, results):
             if not isinstance(result, Exception):
-                update_last_notified(task["sub_id"], task["collection_date"].isoformat())
+                update_last_notified(
+                    task["sub_id"], task["collection_date"].isoformat()
+                )
+                update_notification_log(log_id, "success")
             else:
-                # Log the exception
-                print(f"Failed to send notification to {task['chat_id']}: {result}")
+                error_message = str(result)
+                update_notification_log(log_id, "failure", error_message)
+                print(
+                    f"Failed to send notification to {task['chat_id']}: {error_message}"
+                )
 
         # Wait for 1 second before processing the next chunk
         if i + chunk_size < len(tasks):

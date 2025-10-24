@@ -55,6 +55,9 @@ def index():
         "bot_uptime_hours": "N/A",
         "ical_download_errors": 0,
         "opt_out_rate_percent": 0,
+        "delivery_rate_percent": 0,
+        "failure_rate_percent": 0,
+        "avg_delivery_latency_seconds": 0,
     }
     logs = []
 
@@ -97,6 +100,37 @@ def index():
                 kpis["opt_out_rate_percent"] = round(
                     (inactive_subscriptions / total_subscriptions) * 100, 2
                 )
+
+            # --- Notification KPIs ---
+            try:
+                total_notifications = cur.execute(
+                    "SELECT COUNT(*) FROM notification_logs WHERE status IN ('success', 'failure')"
+                ).fetchone()[0]
+                if total_notifications > 0:
+                    successful_notifications = cur.execute(
+                        "SELECT COUNT(*) FROM notification_logs WHERE status = 'success'"
+                    ).fetchone()[0]
+                    failed_notifications = cur.execute(
+                        "SELECT COUNT(*) FROM notification_logs WHERE status = 'failure'"
+                    ).fetchone()[0]
+
+                    kpis["delivery_rate_percent"] = round(
+                        (successful_notifications / total_notifications) * 100, 2
+                    )
+                    kpis["failure_rate_percent"] = round(
+                        (failed_notifications / total_notifications) * 100, 2
+                    )
+
+                    # Calculate average latency for successful notifications
+                    avg_latency = cur.execute(
+                        "SELECT AVG(JULIANDAY(timestamp_sent) - JULIANDAY(timestamp_scheduled)) FROM notification_logs WHERE status = 'success'"
+                    ).fetchone()[0]
+                    if avg_latency:
+                        kpis["avg_delivery_latency_seconds"] = round(
+                            avg_latency * 86400, 2
+                        )  # Convert days to seconds
+            except (sqlite3.Error, TypeError, ZeroDivisionError) as e:
+                logger.warning(f"Could not calculate notification KPIs: {e}")
 
             # --- Fetch Logs ---
             logs_query = cur.execute(
