@@ -12,11 +12,14 @@ from icalendar import Calendar
 
 from ..exceptions import DownloadError, ParsingError
 from ..models import WasteEvent
+from ..config import (
+    ICAL_API_URL,
+    SCHEDULE_SERVICE_MAX_RETRIES,
+    SCHEDULE_SERVICE_RETRY_DELAY,
+)
 
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
-
-ICAL_API_URL = "https://stadtplan.dresden.de/project/cardo3Apps/IDU_DDStadtplan/abfall/ical.ashx"
 
 waste_type_pattern = re.compile(
     r"(Bio|Gelbe|Rest|Papier|Weihnachtsbaum)[-\s]?Tonne", re.IGNORECASE
@@ -27,7 +30,11 @@ contact_pattern = re.compile(r"durch (.*?),\s*Kontakt:\s*([\d\s\/\+()-]+?)\)")
 class ScheduleService:
     """Handles downloading and parsing of waste schedules."""
 
-    def __init__(self, max_retries: int = 3, retry_delay: int = 10):
+    def __init__(
+        self,
+        max_retries: int = SCHEDULE_SERVICE_MAX_RETRIES,
+        retry_delay: int = SCHEDULE_SERVICE_RETRY_DELAY,
+    ):
         self.max_retries = max_retries
         self.retry_delay = retry_delay
 

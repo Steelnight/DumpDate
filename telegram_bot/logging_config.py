@@ -6,13 +6,15 @@ import logging
 import sqlite3
 from logging import Handler, LogRecord
 
+from schedule_parser.config import WASTE_SCHEDULE_DB_PATH
+
 
 class SQLiteHandler(Handler):
     """
     A logging handler that writes records to an SQLite database.
     """
 
-    def __init__(self, db_path: str = "waste_schedule.db"):
+    def __init__(self, db_path: str = WASTE_SCHEDULE_DB_PATH):
         super().__init__()
         self.db_path = db_path
 

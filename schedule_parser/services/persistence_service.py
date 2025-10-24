@@ -5,12 +5,13 @@ import sqlite3
 from typing import Optional, List
 
 from ..models import WasteEvent
+from ..config import WASTE_SCHEDULE_DB_PATH, ADDRESS_LOOKUP_DB_PATH
 
 
 class PersistenceService:
     """Handles all database interactions for the application."""
 
-    def __init__(self, db_path: str = "waste_schedule.db"):
+    def __init__(self, db_path: str = WASTE_SCHEDULE_DB_PATH):
         self.db_path = db_path
         self._conn: Optional[sqlite3.Connection] = None
         self._cursor: Optional[sqlite3.Cursor] = None
@@ -166,7 +167,7 @@ class PersistenceService:
         # Note: This is a simplified example. In a real scenario, you might want to
         # manage the connection to the address_lookup.db more carefully.
         try:
-            conn = sqlite3.connect("address_lookup.db")
+            conn = sqlite3.connect(ADDRESS_LOOKUP_DB_PATH)
             cur = conn.cursor()
             cur.execute("SELECT address FROM addresses WHERE address_id = ?", (address_id,))
             row = cur.fetchone()
@@ -213,8 +214,7 @@ class PersistenceService:
 
         # Attach the address lookup database to the current connection
         # to perform a cross-database query.
-        lookup_db_path = "address_lookup.db"
-        cur.execute(f"ATTACH DATABASE '{lookup_db_path}' AS address_db")
+        cur.execute(f"ATTACH DATABASE '{ADDRESS_LOOKUP_DB_PATH}' AS address_db")
 
         query = """
             SELECT DISTINCT

@@ -4,11 +4,10 @@ import logging
 import requests
 import os
 
+from schedule_parser.config import ADDRESS_API_URL, ADDRESS_LOOKUP_DB_PATH
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
-
-ADDRESS_API_URL = "https://kommisdd.dresden.de/net4/public/ogcapi/collections/L134/items?limit=100000"
-DB_FILE = "address_lookup.db"
 
 def build_address_database():
     """
@@ -18,12 +17,12 @@ def build_address_database():
     This script should be run periodically (e.g., weekly) to keep the
     address data up-to-date.
     """
-    logging.info(f"Building address cache database at '{DB_FILE}'...")
+    logging.info(f"Building address cache database at '{ADDRESS_LOOKUP_DB_PATH}'...")
 
     # Remove the old database file if it exists to ensure a fresh build
-    if os.path.exists(DB_FILE):
-        os.remove(DB_FILE)
-        logging.info(f"Removed existing database file: {DB_FILE}")
+    if os.path.exists(ADDRESS_LOOKUP_DB_PATH):
+        os.remove(ADDRESS_LOOKUP_DB_PATH)
+        logging.info(f"Removed existing database file: {ADDRESS_LOOKUP_DB_PATH}")
 
     logging.info(f"Attempting to download data from: {ADDRESS_API_URL}")
     try:
@@ -51,7 +50,7 @@ def build_address_database():
 
         logging.info(f"Extracted {len(address_data)} address-ID pairs.")
 
-        conn = sqlite3.connect(DB_FILE)
+        conn = sqlite3.connect(ADDRESS_LOOKUP_DB_PATH)
         cursor = conn.cursor()
         cursor.execute("CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)")
         cursor.executemany("INSERT INTO addresses VALUES (?, ?)", address_data)
@@ -59,7 +58,7 @@ def build_address_database():
         conn.commit()
         conn.close()
 
-        logging.info(f"Successfully created and populated address database: {DB_FILE}")
+        logging.info(f"Successfully created and populated address database: {ADDRESS_LOOKUP_DB_PATH}")
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to download address data: {e}")
