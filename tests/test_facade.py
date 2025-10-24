@@ -18,6 +18,7 @@ def mock_services():
         "persistence_service": MagicMock(),
         "subscription_service": MagicMock(),
         "notification_service": MagicMock(),
+        "smart_schedule_service": MagicMock(),
     }
 
 def test_subscribe_address_for_user_success(mock_services):

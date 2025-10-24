@@ -235,3 +235,22 @@ class PersistenceService:
         cur.execute("DETACH DATABASE address_db")
 
         return locations
+
+    def get_next_waste_event_for_subscription(self, address_id: int, today_date: str) -> Optional[dict]:
+        """
+        Retrieves the next waste event for a given address_id that is on or after today's date.
+        """
+        cur = self._get_cursor()
+        cur.execute(
+            """
+            SELECT * FROM waste_events
+            WHERE original_address = (
+                SELECT address FROM waste_events WHERE location LIKE ? LIMIT 1
+            ) AND date >= ?
+            ORDER BY date ASC
+            LIMIT 1
+            """,
+            (f"%{address_id}%", today_date),
+        )
+        row = cur.fetchone()
+        return dict(row) if row else None

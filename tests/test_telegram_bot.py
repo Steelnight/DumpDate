@@ -2,11 +2,13 @@
 Tests for the main Telegram bot conversation handlers.
 """
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 from telegram import Update, User, Message, Chat
-from telegram.ext import ConversationHandler, ContextTypes
+from telegram.ext import ConversationHandler
 
+from telegram_bot.context import CustomContext
+from schedule_parser.facade import WasteManagementFacade
 from telegram_bot.bot import (
     ADDRESS,
     CONFIRM_ADDRESS,
@@ -18,7 +20,8 @@ from telegram_bot.bot import (
     set_notification_time,
     unsubscribe,
     select_sub_to_unsubscribe,
-    my_subscriptions
+    my_subscriptions,
+    next_pickup
 )
 
 
@@ -37,17 +40,11 @@ def mock_update():
 
 @pytest.fixture
 def mock_context():
-    """Returns a mock Telegram ContextTypes.DEFAULT_TYPE object."""
-    context = MagicMock(spec=ContextTypes.DEFAULT_TYPE)
+    """Returns a mock CustomContext object with a mock facade."""
+    context = MagicMock(spec=CustomContext)
     context.user_data = {}
+    context.facade = MagicMock(spec=WasteManagementFacade)
     return context
-
-
-@pytest.fixture
-def mock_facade():
-    """Fixture to mock the WasteManagementFacade."""
-    with patch('telegram_bot.bot.facade', autospec=True) as mock_facade:
-        yield mock_facade
 
 
 @pytest.mark.asyncio
@@ -59,9 +56,9 @@ async def test_subscribe_starts_conversation(mock_update, mock_context):
 
 
 @pytest.mark.asyncio
-async def test_handle_address_input_no_matches(mock_update, mock_context, mock_facade):
+async def test_handle_address_input_no_matches(mock_update, mock_context):
     """Tests address input with no matches found."""
-    mock_facade.find_address_matches.return_value = []
+    mock_context.facade.find_address_matches.return_value = []
     mock_update.message.text = "Unknown Street 123"
     result = await handle_address_input(mock_update, mock_context)
     mock_update.message.reply_text.assert_called_with("Leider konnte keine passende Adresse gefunden werden. Bitte versuche es erneut.")
@@ -69,17 +66,17 @@ async def test_handle_address_input_no_matches(mock_update, mock_context, mock_f
 
 
 @pytest.mark.asyncio
-async def test_handle_address_input_with_matches(mock_update, mock_context, mock_facade):
+async def test_handle_address_input_with_matches(mock_update, mock_context):
     """Tests address input with matches found."""
     matches = [("Test Straße 1", 1), ("Test Straße 2", 2)]
-    mock_facade.find_address_matches.return_value = matches
+    mock_context.facade.find_address_matches.return_value = matches
     mock_update.message.text = "Test Straße"
     result = await handle_address_input(mock_update, mock_context)
     assert result == CONFIRM_ADDRESS
 
 
 @pytest.mark.asyncio
-async def test_confirm_address_invalid_selection(mock_update, mock_context, mock_facade):
+async def test_confirm_address_invalid_selection(mock_update, mock_context):
     """Tests address confirmation with an invalid selection."""
     mock_context.user_data["matches"] = {"Test Straße 1": 1}
     mock_update.message.text = "Invalid Selection"
@@ -88,7 +85,7 @@ async def test_confirm_address_invalid_selection(mock_update, mock_context, mock
 
 
 @pytest.mark.asyncio
-async def test_confirm_address_valid_selection(mock_update, mock_context, mock_facade):
+async def test_confirm_address_valid_selection(mock_update, mock_context):
     """Tests address confirmation with a valid selection."""
     mock_context.user_data["matches"] = {"Test Straße 1": 1}
     mock_update.message.text = "Test Straße 1"
@@ -97,43 +94,43 @@ async def test_confirm_address_valid_selection(mock_update, mock_context, mock_f
 
 
 @pytest.mark.asyncio
-async def test_set_notification_time_evening(mock_update, mock_context, mock_facade):
+async def test_set_notification_time_evening(mock_update, mock_context):
     """Tests setting the notification time to evening."""
     mock_context.user_data["selected_address_str"] = "Test Straße 1"
     mock_update.message.text = "Abend vorher (19 Uhr)"
     result = await set_notification_time(mock_update, mock_context)
-    mock_facade.subscribe_address_for_user.assert_called_with(
+    mock_context.facade.subscribe_address_for_user.assert_called_with(
         chat_id=12345, address="Test Straße 1", notification_time="evening"
     )
     assert result == ConversationHandler.END
 
 
 @pytest.mark.asyncio
-async def test_set_notification_time_morning(mock_update, mock_context, mock_facade):
+async def test_set_notification_time_morning(mock_update, mock_context):
     """Tests setting the notification time to morning."""
     mock_context.user_data["selected_address_str"] = "Test Straße 1"
     mock_update.message.text = "Morgen der Abholung (6 Uhr)"
     result = await set_notification_time(mock_update, mock_context)
-    mock_facade.subscribe_address_for_user.assert_called_with(
+    mock_context.facade.subscribe_address_for_user.assert_called_with(
         chat_id=12345, address="Test Straße 1", notification_time="morning"
     )
     assert result == ConversationHandler.END
 
 
 @pytest.mark.asyncio
-async def test_my_subscriptions_no_subscriptions(mock_update, mock_context, mock_facade):
+async def test_my_subscriptions_no_subscriptions(mock_update, mock_context):
     """Tests that the /mysubscriptions command handles no subscriptions."""
-    mock_facade.get_user_subscriptions.return_value = []
+    mock_context.facade.get_user_subscriptions.return_value = []
     await my_subscriptions(mock_update, mock_context)
     mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Benachrichtigungen.")
 
 
 @pytest.mark.asyncio
-async def test_my_subscriptions_with_subscriptions(mock_update, mock_context, mock_facade):
+async def test_my_subscriptions_with_subscriptions(mock_update, mock_context):
     """Tests that the /mysubscriptions command displays subscriptions."""
     subscriptions = [{"id": 1, "address_id": 1, "notification_time": "evening"}]
-    mock_facade.get_user_subscriptions.return_value = subscriptions
-    mock_facade.get_address_by_id.return_value = "Test Straße 1"
+    mock_context.facade.get_user_subscriptions.return_value = subscriptions
+    mock_context.facade.get_address_by_id.return_value = "Test Straße 1"
     await my_subscriptions(mock_update, mock_context)
     mock_update.message.reply_text.assert_called_with(
         "Deine aktiven Benachrichtigungen:\n\n- Test Straße 1 (Abend vorher)\n"
@@ -141,26 +138,26 @@ async def test_my_subscriptions_with_subscriptions(mock_update, mock_context, mo
 
 
 @pytest.mark.asyncio
-async def test_unsubscribe_no_subscriptions(mock_update, mock_context, mock_facade):
+async def test_unsubscribe_no_subscriptions(mock_update, mock_context):
     """Tests that the /unsubscribe command handles no subscriptions."""
-    mock_facade.get_user_subscriptions.return_value = []
+    mock_context.facade.get_user_subscriptions.return_value = []
     result = await unsubscribe(mock_update, mock_context)
     mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Benachrichtigungen zum Abbestellen.")
     assert result == ConversationHandler.END
 
 
 @pytest.mark.asyncio
-async def test_unsubscribe_starts_conversation(mock_update, mock_context, mock_facade):
+async def test_unsubscribe_starts_conversation(mock_update, mock_context):
     """Tests that the /unsubscribe command starts the conversation."""
     subscriptions = [{"id": 1, "address_id": 1}]
-    mock_facade.get_user_subscriptions.return_value = subscriptions
-    mock_facade.get_address_by_id.return_value = "Test Straße 1"
+    mock_context.facade.get_user_subscriptions.return_value = subscriptions
+    mock_context.facade.get_address_by_id.return_value = "Test Straße 1"
     result = await unsubscribe(mock_update, mock_context)
     assert result == SELECT_SUB
 
 
 @pytest.mark.asyncio
-async def test_select_sub_to_unsubscribe_invalid_selection(mock_update, mock_context, mock_facade):
+async def test_select_sub_to_unsubscribe_invalid_selection(mock_update, mock_context):
     """Tests unsubscribing with an invalid selection."""
     mock_context.user_data["subscriptions"] = {"Test Straße 1": 1}
     mock_update.message.text = "Invalid Selection"
@@ -169,10 +166,33 @@ async def test_select_sub_to_unsubscribe_invalid_selection(mock_update, mock_con
 
 
 @pytest.mark.asyncio
-async def test_select_sub_to_unsubscribe_valid_selection(mock_update, mock_context, mock_facade):
+async def test_select_sub_to_unsubscribe_valid_selection(mock_update, mock_context):
     """Tests unsubscribing with a valid selection."""
     mock_context.user_data["subscriptions"] = {"Test Straße 1": 1}
     mock_update.message.text = "Test Straße 1"
     result = await select_sub_to_unsubscribe(mock_update, mock_context)
-    mock_facade.unsubscribe.assert_called_with(1)
+    mock_context.facade.unsubscribe.assert_called_with(1)
     assert result == ConversationHandler.END
+
+
+@pytest.mark.asyncio
+async def test_next_pickup_no_pickups(mock_update, mock_context):
+    """Tests that the /nextpickup command handles no pickups."""
+    mock_context.facade.get_next_pickup_for_user.return_value = []
+    await next_pickup(mock_update, mock_context)
+    mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Abonnements oder es stehen keine Abholungen an.")
+
+
+@pytest.mark.asyncio
+async def test_next_pickup_with_pickups(mock_update, mock_context):
+    """Tests that the /nextpickup command displays pickups."""
+    pickups = [
+        {
+            "address": "Test Straße 1",
+            "event": {"waste_type": "Restabfall", "date": "2025-10-26"},
+        }
+    ]
+    mock_context.facade.get_next_pickup_for_user.return_value = pickups
+    await next_pickup(mock_update, mock_context)
+    expected_message = "<b>Nächste Abholungen:</b>\n\n📍 <b>Test Straße 1</b>\n   ⚫ Restabfall am 2025-10-26\n\n"
+    mock_update.message.reply_text.assert_called_with(expected_message, parse_mode='HTML')

@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  cache-builder:
+    build: .
+    command: ["python", "-m", "dump_date.main", "build-cache"]
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+
+  bot:
+    build: .
+    depends_on:
+      - cache-builder
+    command: ["python", "-m", "dump_date.main", "bot"]
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+
+  dashboard:
+    build: .
+    command: ["python", "-m", "dump_date.main", "dashboard"]
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    environment:
+      - PYTHONUNBUFFERED=1
+      - FLASK_RUN_HOST=0.0.0.0

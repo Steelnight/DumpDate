@@ -10,6 +10,7 @@ from .services.notification_service import NotificationService
 from .services.persistence_service import PersistenceService
 from .services.schedule_service import ScheduleService
 from .services.subscription_service import SubscriptionService
+from .services.smart_schedule_service import SmartScheduleService
 from .exceptions import DownloadError, ParsingError
 from .models import WasteEvent
 
@@ -29,12 +30,14 @@ class WasteManagementFacade:
         persistence_service: PersistenceService,
         subscription_service: SubscriptionService,
         notification_service: NotificationService,
+        smart_schedule_service: SmartScheduleService,
     ):
         self.address_service = address_service
         self.schedule_service = schedule_service
         self.persistence_service = persistence_service
         self.subscription_service = subscription_service
         self.notification_service = notification_service
+        self.smart_schedule_service = smart_schedule_service
 
     def subscribe_address_for_user(
         self, chat_id: int, address: str, notification_time: str
@@ -196,3 +199,20 @@ class WasteManagementFacade:
             self.subscription_service.update_last_notified(subscription_id, collection_date.isoformat())
         except Exception as e:
             logger.exception(f"Failed to update last notified date for sub_id {subscription_id}.")
+
+    def get_next_pickup_for_user(self, chat_id: int) -> List[dict]:
+        """Gets the next pickup for each of a user's subscriptions."""
+        subscriptions = self.get_user_subscriptions(chat_id)
+        if not subscriptions:
+            return []
+
+        today = date.today().isoformat()
+        next_pickups = []
+
+        with self.persistence_service as p:
+            for sub in subscriptions:
+                event = p.get_next_waste_event_for_subscription(sub["address_id"], today)
+                if event:
+                    address = self.get_address_by_id(sub["address_id"])
+                    next_pickups.append({"address": address, "event": event})
+        return next_pickups

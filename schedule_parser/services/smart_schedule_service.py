@@ -4,6 +4,8 @@ This module defines the SmartScheduleService for intelligently updating waste sc
 import logging
 from datetime import date, timedelta
 import holidays
+import asyncio
+from schedule_parser.config import SCHEDULE_UPDATE_INTERVAL_HOURS
 from .persistence_service import PersistenceService
 from .schedule_service import ScheduleService
 from ..exceptions import DownloadError, ParsingError
@@ -73,3 +75,19 @@ class SmartScheduleService:
                 logger.exception(f"An unexpected error occurred while updating schedule for {original_address} (ID: {standort_id}): {e}")
 
         logger.info("Smart schedule update completed.")
+
+    async def run_scheduler(self) -> None:
+        """
+        Runs the schedule update loop indefinitely.
+        """
+        while True:
+            try:
+                logger.info("Running smart schedule update...")
+                self.update_all_schedules()
+                logger.info("Smart schedule update finished.")
+            except Exception as e:
+                logger.exception(f"An error occurred during the smart schedule update: {e}")
+
+            sleep_duration = SCHEDULE_UPDATE_INTERVAL_HOURS * 3600
+            logger.info(f"Sleeping for {SCHEDULE_UPDATE_INTERVAL_HOURS} hours...")
+            await asyncio.sleep(sleep_duration)

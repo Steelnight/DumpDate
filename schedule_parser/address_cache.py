@@ -66,6 +66,3 @@ def build_address_database():
         logging.error("Failed to parse JSON from the API response.")
     except sqlite3.Error as e:
         logging.error(f"Database error: {e}")
-
-if __name__ == "__main__":
-    build_address_database()
