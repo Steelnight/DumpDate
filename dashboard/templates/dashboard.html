@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Waste Management Dashboard</title>
+    <style>
+        body { font-family: sans-serif; }
+        table { border-collapse: collapse; width: 100%; margin-bottom: 20px; }
+        th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Waste Management Dashboard</h1>
+
+    {% if error %}
+        <p style="color: red;"><strong>Error loading data:</strong> {{ error }}</p>
+    {% endif %}
+
+    <h2>Waste Events ({{ events|length }})</h2>
+    <table>
+        <tr>
+            <th>Date</th>
+            <th>Waste Type</th>
+            <th>Original Address</th>
+        </tr>
+        {% for event in events %}
+        <tr>
+            <td>{{ event.date }}</td>
+            <td>{{ event.waste_type }}</td>
+            <td>{{ event.original_address }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Active Subscriptions ({{ subscriptions|length }})</h2>
+    <table>
+        <tr>
+            <th>Chat ID</th>
+            <th>Address ID</th>
+            <th>Notification Time</th>
+        </tr>
+        {% for sub in subscriptions %}
+        <tr>
+            <td>{{ sub.chat_id }}</td>
+            <td>{{ sub.address_id }}</td>
+            <td>{{ sub.notification_time }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+    <h2>Recent Logs ({{ logs|length }})</h2>
+    <table>
+        <tr>
+            <th>Timestamp</th>
+            <th>Level</th>
+            <th>Message</th>
+        </tr>
+        {% for log in logs %}
+        <tr>
+            <td>{{ log.timestamp }}</td>
+            <td>{{ log.level }}</td>
+            <td>{{ log.message }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+
+</body>
+</html>

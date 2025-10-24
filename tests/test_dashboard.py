@@ -1,23 +1,41 @@
 """
-Tests for the Flask dashboard application.
+Unit tests for the Flask Dashboard.
 """
-
 import pytest
+from unittest.mock import patch
 from dashboard.app import app
 
+# Sample data for mocking the facade's response
+SAMPLE_DATA = {
+    "events": [{"date": "2023-10-27", "waste_type": "Rest-Tonne", "original_address": "Test Str 1"}],
+    "subscriptions": [{"chat_id": 123, "address_id": 456, "notification_time": "evening"}],
+    "logs": [{"timestamp": "2023-10-26 10:00:00", "level": "INFO", "message": "Test log"}],
+}
 
 @pytest.fixture
 def client():
-    """Create a test client for the Flask app."""
-    app.config["TESTING"] = True
+    app.config['TESTING'] = True
     with app.test_client() as client:
         yield client
 
+@patch('dashboard.app.facade.get_dashboard_data')
+def test_dashboard_displays_data(mock_get_data, client):
+    """
+    Tests that the dashboard correctly renders data retrieved from the facade.
+    """
+    # Arrange
+    mock_get_data.return_value = SAMPLE_DATA
 
-def test_dashboard_main_route(client):
-    """
-    Test that the main dashboard route returns a 200 OK status.
-    """
-    response = client.get("/")
+    # Act
+    response = client.get('/')
+
+    # Assert
     assert response.status_code == 200
-    assert b"DumpDate Bot Status Dashboard" in response.data
+    # Check for event data
+    assert b"Rest-Tonne" in response.data
+    assert b"Test Str 1" in response.data
+    # Check for subscription data
+    assert b"123" in response.data
+    assert b"evening" in response.data
+    # Check for log data
+    assert b"Test log" in response.data
