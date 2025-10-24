@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "schedule-parser"
+name = "DumpDate"
 version = "0.1.0"
-description = "A package to parse .ics files from Dresden's municipal waste schedule and store event data in a local SQLite database."
+description = "DumpDate is a smart reminder bot that keeps track of the local garbage collection schedule in Dresden and notifies you before pickup."
 authors = ["Jules <you@example.com>"]
 license = "MIT"
 readme = "README.md"
