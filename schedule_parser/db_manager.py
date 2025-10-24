@@ -35,9 +35,30 @@ def init_db(db_path: str = "waste_schedule.db") -> None:
             address_id INTEGER NOT NULL,
             notification_time TEXT NOT NULL,
             last_notified DATE,
+            is_active BOOLEAN DEFAULT 1,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             UNIQUE(chat_id, address_id)
         )
     """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+            level TEXT NOT NULL,
+            message TEXT NOT NULL,
+            logger_name TEXT
+        )
+        """
+    )
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS system_info (
+            key TEXT PRIMARY KEY,
+            value TEXT
+        )
+        """
     )
     conn.commit()
     conn.close()

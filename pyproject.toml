@@ -22,6 +22,9 @@ black = "^25.9.0"
 isort = "^7.0.0"
 ruff = "^0.14.1"
 
+[tool.poetry.group.dashboard.dependencies]
+Flask = "^3.0.3"
+
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
