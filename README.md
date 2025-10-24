@@ -1,6 +1,32 @@
 # DumpDate
 DumpDate is a smart reminder bot that keeps track of the local garbage collection schedule in Dresden and notifies you before pickup
 
+## Running with Docker
+
+1.  **Clone the repository:**
+    ```sh
+    git clone https://github.com/your-username/dumpdate.git
+    cd dumpdate
+    ```
+
+2.  **Create an `.env` file:**
+    Copy the example file and add your Telegram Bot Token.
+    ```sh
+    cp .env.example .env
+    ```
+    Now edit `.env` and paste your token.
+
+3.  **Build and run the application:**
+    ```sh
+    docker-compose up --build
+    ```
+
+This command will:
+*   Build the Docker image for the application.
+*   Run the `build_cache.py` script to create the address database.
+*   Start the Telegram bot.
+*   Start the web dashboard, which will be accessible at `http://localhost:5000`.
+
 # Planned Features
 
 🗑️ 1. Automated Schedule Retrieval
