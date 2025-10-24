@@ -196,3 +196,20 @@ class WasteManagementFacade:
             self.subscription_service.update_last_notified(subscription_id, collection_date.isoformat())
         except Exception as e:
             logger.exception(f"Failed to update last notified date for sub_id {subscription_id}.")
+
+    def get_next_pickup_for_user(self, chat_id: int) -> List[dict]:
+        """Gets the next pickup for each of a user's subscriptions."""
+        subscriptions = self.get_user_subscriptions(chat_id)
+        if not subscriptions:
+            return []
+
+        today = date.today().isoformat()
+        next_pickups = []
+
+        with self.persistence_service as p:
+            for sub in subscriptions:
+                event = p.get_next_waste_event_for_subscription(sub["address_id"], today)
+                if event:
+                    address = self.get_address_by_id(sub["address_id"])
+                    next_pickups.append({"address": address, "event": event})
+        return next_pickups

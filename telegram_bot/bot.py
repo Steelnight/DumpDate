@@ -198,6 +198,34 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     context.user_data.clear()
     return ConversationHandler.END
 
+
+async def next_pickup(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Displays the next pickup for each of the user's subscriptions."""
+    chat_id = update.message.chat_id
+    pickups = facade.get_next_pickup_for_user(chat_id)
+
+    if not pickups:
+        await update.message.reply_text("Du hast keine aktiven Abonnements oder es stehen keine Abholungen an.")
+        return
+
+    message = "<b>Nächste Abholungen:</b>\n\n"
+    for pickup in pickups:
+        address = pickup['address']
+        event = pickup['event']
+        # Simple emoji mapping
+        emoji_map = {
+            "Restabfall": "⚫",
+            "Bioabfall": "🟤",
+            "Papier": "🔵",
+            "Gelbe Tonne": "🟡",
+        }
+        emoji = emoji_map.get(event['waste_type'], "🗑️")
+        message += f"📍 <b>{address}</b>\n"
+        message += f"   {emoji} {event['waste_type']} am {event['date']}\n\n"
+
+    await update.message.reply_text(message, parse_mode='HTML')
+
+
 def main(bot_token: str, application: Application = None) -> None:
     """Start the bot."""
     if not application:
@@ -225,6 +253,7 @@ def main(bot_token: str, application: Application = None) -> None:
 
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("mysubscriptions", my_subscriptions))
+    application.add_handler(CommandHandler("nextpickup", next_pickup))
     application.add_handler(subscribe_conv)
     application.add_handler(unsubscribe_conv)
 

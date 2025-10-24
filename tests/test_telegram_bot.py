@@ -18,7 +18,8 @@ from telegram_bot.bot import (
     set_notification_time,
     unsubscribe,
     select_sub_to_unsubscribe,
-    my_subscriptions
+    my_subscriptions,
+    next_pickup
 )
 
 
@@ -176,3 +177,26 @@ async def test_select_sub_to_unsubscribe_valid_selection(mock_update, mock_conte
     result = await select_sub_to_unsubscribe(mock_update, mock_context)
     mock_facade.unsubscribe.assert_called_with(1)
     assert result == ConversationHandler.END
+
+
+@pytest.mark.asyncio
+async def test_next_pickup_no_pickups(mock_update, mock_context, mock_facade):
+    """Tests that the /nextpickup command handles no pickups."""
+    mock_facade.get_next_pickup_for_user.return_value = []
+    await next_pickup(mock_update, mock_context)
+    mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Abonnements oder es stehen keine Abholungen an.")
+
+
+@pytest.mark.asyncio
+async def test_next_pickup_with_pickups(mock_update, mock_context, mock_facade):
+    """Tests that the /nextpickup command displays pickups."""
+    pickups = [
+        {
+            "address": "Test Straße 1",
+            "event": {"waste_type": "Restabfall", "date": "2025-10-26"},
+        }
+    ]
+    mock_facade.get_next_pickup_for_user.return_value = pickups
+    await next_pickup(mock_update, mock_context)
+    expected_message = "<b>Nächste Abholungen:</b>\n\n📍 <b>Test Straße 1</b>\n   ⚫ Restabfall am 2025-10-26\n\n"
+    mock_update.message.reply_text.assert_called_with(expected_message, parse_mode='HTML')
