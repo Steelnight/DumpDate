@@ -10,6 +10,7 @@ from .services.notification_service import NotificationService
 from .services.persistence_service import PersistenceService
 from .services.schedule_service import ScheduleService
 from .services.subscription_service import SubscriptionService
+from .services.smart_schedule_service import SmartScheduleService
 from .exceptions import DownloadError, ParsingError
 from .models import WasteEvent
 
@@ -29,12 +30,14 @@ class WasteManagementFacade:
         persistence_service: PersistenceService,
         subscription_service: SubscriptionService,
         notification_service: NotificationService,
+        smart_schedule_service: SmartScheduleService,
     ):
         self.address_service = address_service
         self.schedule_service = schedule_service
         self.persistence_service = persistence_service
         self.subscription_service = subscription_service
         self.notification_service = notification_service
+        self.smart_schedule_service = smart_schedule_service
 
     def subscribe_address_for_user(
         self, chat_id: int, address: str, notification_time: str

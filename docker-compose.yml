@@ -3,7 +3,7 @@ version: '3.8'
 services:
   cache-builder:
     build: .
-    command: ["python", "build_cache.py"]
+    command: ["python", "-m", "dump_date.main", "build-cache"]
     volumes:
       - .:/app
     environment:
@@ -13,7 +13,7 @@ services:
     build: .
     depends_on:
       - cache-builder
-    command: ["python", "run_bot.py"]
+    command: ["python", "-m", "dump_date.main", "bot"]
     volumes:
       - .:/app
     environment:
@@ -22,9 +22,9 @@ services:
 
   dashboard:
     build: .
-    command: ["python", "run_dashboard.py"]
+    command: ["python", "-m", "dump_date.main", "dashboard"]
     ports:
-      - "5000:5000"
+      - "8080:8080"
     volumes:
       - .:/app
     environment:

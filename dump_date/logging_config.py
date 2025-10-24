@@ -1,11 +1,9 @@
 """
-This module sets up a database logging handler for the Telegram bot.
+This module sets up a database logging handler for the application.
 """
-
 import logging
 import sqlite3
 from logging import Handler, LogRecord
-
 from schedule_parser.config import WASTE_SCHEDULE_DB_PATH
 
 

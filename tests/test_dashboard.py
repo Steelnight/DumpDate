@@ -28,13 +28,15 @@ def client():
     with app.test_client() as client:
         yield client
 
-@patch('dashboard.app.facade.get_dashboard_data')
-def test_dashboard_displays_data(mock_get_data, client):
+
+def test_dashboard_displays_data(client):
     """
     Tests that the dashboard correctly renders data retrieved from the facade.
     """
     # Arrange
-    mock_get_data.return_value = SAMPLE_DATA
+    mock_facade = patch('schedule_parser.facade.WasteManagementFacade').start()
+    mock_facade.get_dashboard_data.return_value = SAMPLE_DATA
+    app.config["FACADE"] = mock_facade
 
     # Act
     response = client.get('/')
@@ -49,14 +51,17 @@ def test_dashboard_displays_data(mock_get_data, client):
     assert b"evening" in response.data
     # Check for log data
     assert b"Test log" in response.data
+    patch.stopall()
 
-@patch('dashboard.app.facade.get_dashboard_data')
-def test_dashboard_handles_empty_data(mock_get_data, client):
+
+def test_dashboard_handles_empty_data(client):
     """
     Tests that the dashboard renders correctly when the facade returns no data.
     """
     # Arrange
-    mock_get_data.return_value = EMPTY_DATA
+    mock_facade = patch('schedule_parser.facade.WasteManagementFacade').start()
+    mock_facade.get_dashboard_data.return_value = EMPTY_DATA
+    app.config["FACADE"] = mock_facade
 
     # Act
     response = client.get('/')
@@ -66,14 +71,17 @@ def test_dashboard_handles_empty_data(mock_get_data, client):
     assert b"No events found." in response.data
     assert b"No subscriptions found." in response.data
     assert b"No logs found." in response.data
+    patch.stopall()
 
-@patch('dashboard.app.facade.get_dashboard_data')
-def test_dashboard_displays_error(mock_get_data, client):
+
+def test_dashboard_displays_error(client):
     """
     Tests that the dashboard displays an error message when the facade returns an error.
     """
     # Arrange
-    mock_get_data.return_value = ERROR_DATA
+    mock_facade = patch('schedule_parser.facade.WasteManagementFacade').start()
+    mock_facade.get_dashboard_data.return_value = ERROR_DATA
+    app.config["FACADE"] = mock_facade
 
     # Act
     response = client.get('/')
@@ -81,3 +89,4 @@ def test_dashboard_displays_error(mock_get_data, client):
     # Assert
     assert response.status_code == 200
     assert b"Database connection failed." in response.data
+    patch.stopall()

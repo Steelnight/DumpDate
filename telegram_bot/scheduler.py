@@ -68,7 +68,7 @@ async def check_and_send_notifications(facade: WasteManagementFacade, bot: Bot) 
             await asyncio.sleep(1)
 
 
-async def notification_scheduler(facade: WasteManagementFacade, application: Application) -> None:
+async def scheduler(facade: WasteManagementFacade, application: Application) -> None:
     """
     The main scheduler loop that periodically checks for and sends notifications.
     """
