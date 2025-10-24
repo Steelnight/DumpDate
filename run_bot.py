@@ -3,22 +3,43 @@ This script runs the Telegram bot and the notification scheduler.
 """
 import asyncio
 import logging
+import sqlite3
+from datetime import datetime
 from telegram.ext import Application, AIORateLimiter
+
 from schedule_parser.config import TELEGRAM_BOT_TOKEN
+from schedule_parser.db_manager import init_db
 from telegram_bot.bot import main as bot_main
 from telegram_bot.scheduler import scheduler
+from telegram_bot.logging_config import setup_database_logging
 from build_cache import build_address_database
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Initialize the main database and configure logging
+init_db()
+setup_database_logging()
+
 logger = logging.getLogger(__name__)
+
+
+def record_bot_start_time():
+    """Records the bot's start time in the system_info table."""
+    conn = sqlite3.connect("waste_schedule.db")
+    cur = conn.cursor()
+    cur.execute(
+        "INSERT OR REPLACE INTO system_info (key, value) VALUES (?, ?)",
+        ("bot_start_time", datetime.now().isoformat()),
+    )
+    conn.commit()
+    conn.close()
+
 
 async def main():
     """Initializes and runs the bot and scheduler."""
     # Build the address cache database
     build_address_database()
+
+    # Record the bot start time
+    record_bot_start_time()
 
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN environment variable not set.")
