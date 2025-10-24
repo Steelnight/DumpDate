@@ -5,7 +5,7 @@ description = "A package to parse .ics files from Dresden's municipal waste sche
 authors = ["Jules <you@example.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "schedule_parser"}]
+packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
@@ -22,6 +22,9 @@ pytest = "^8.4.2"
 black = "^25.9.0"
 isort = "^7.0.0"
 ruff = "^0.14.1"
+playwright = "^1.55.0"
+Pillow = "^12.0.0"
+pytest-asyncio = "^1.2.0"
 
 [tool.poetry.group.dashboard.dependencies]
 Flask = "^3.0.3"

@@ -12,6 +12,16 @@ SAMPLE_DATA = {
     "logs": [{"timestamp": "2023-10-26 10:00:00", "level": "INFO", "message": "Test log"}],
 }
 
+EMPTY_DATA = {
+    "events": [],
+    "subscriptions": [],
+    "logs": [],
+}
+
+ERROR_DATA = {
+    "error": "Database connection failed."
+}
+
 @pytest.fixture
 def client():
     app.config['TESTING'] = True
@@ -39,3 +49,35 @@ def test_dashboard_displays_data(mock_get_data, client):
     assert b"evening" in response.data
     # Check for log data
     assert b"Test log" in response.data
+
+@patch('dashboard.app.facade.get_dashboard_data')
+def test_dashboard_handles_empty_data(mock_get_data, client):
+    """
+    Tests that the dashboard renders correctly when the facade returns no data.
+    """
+    # Arrange
+    mock_get_data.return_value = EMPTY_DATA
+
+    # Act
+    response = client.get('/')
+
+    # Assert
+    assert response.status_code == 200
+    assert b"No events found." in response.data
+    assert b"No subscriptions found." in response.data
+    assert b"No logs found." in response.data
+
+@patch('dashboard.app.facade.get_dashboard_data')
+def test_dashboard_displays_error(mock_get_data, client):
+    """
+    Tests that the dashboard displays an error message when the facade returns an error.
+    """
+    # Arrange
+    mock_get_data.return_value = ERROR_DATA
+
+    # Act
+    response = client.get('/')
+
+    # Assert
+    assert response.status_code == 200
+    assert b"Database connection failed." in response.data

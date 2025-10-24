@@ -29,6 +29,10 @@
             <td>{{ event.waste_type }}</td>
             <td>{{ event.original_address }}</td>
         </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No events found.</td>
+        </tr>
         {% endfor %}
     </table>
 
@@ -45,6 +49,10 @@
             <td>{{ sub.address_id }}</td>
             <td>{{ sub.notification_time }}</td>
         </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No subscriptions found.</td>
+        </tr>
         {% endfor %}
     </table>
 
@@ -60,6 +68,10 @@
             <td>{{ log.timestamp }}</td>
             <td>{{ log.level }}</td>
             <td>{{ log.message }}</td>
+        </tr>
+        {% else %}
+        <tr>
+            <td colspan="3">No logs found.</td>
         </tr>
         {% endfor %}
     </table>
