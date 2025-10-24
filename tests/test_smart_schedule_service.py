@@ -15,7 +15,7 @@ class MockDate(date):
         # Default value, can be overridden in each test.
         return date(2024, 1, 1)
 
-class TestSmartScheduleService(unittest.TestCase):
+class TestSmartScheduleService(unittest.IsolatedAsyncioTestCase):
     """Test suite for the SmartScheduleService."""
 
     def setUp(self):
@@ -29,16 +29,18 @@ class TestSmartScheduleService(unittest.TestCase):
         )
 
     @patch('schedule_parser.services.smart_schedule_service.date', MockDate)
-    def test_update_all_schedules_no_locations(self):
+    @patch('asyncio.sleep')
+    async def test_update_all_schedules_no_locations(self, mock_sleep):
         """
         Test that the service handles the case where there are no subscribed locations.
         """
         self.persistence_service.get_unique_subscribed_locations.return_value = []
-        self.smart_schedule_service.update_all_schedules()
+        await self.smart_schedule_service.update_all_schedules()
         self.schedule_service.download_and_parse_schedule.assert_not_called()
 
     @patch('schedule_parser.services.smart_schedule_service.date', MockDate)
-    def test_update_all_schedules_with_locations(self):
+    @patch('asyncio.sleep')
+    async def test_update_all_schedules_with_locations(self, mock_sleep):
         """
         Test the successful update of schedules for subscribed locations.
         """
@@ -62,14 +64,15 @@ class TestSmartScheduleService(unittest.TestCase):
         self.persistence_service.get_unique_subscribed_locations.return_value = locations
         self.schedule_service.download_and_parse_schedule.return_value = events
 
-        self.smart_schedule_service.update_all_schedules()
+        await self.smart_schedule_service.update_all_schedules()
 
         self.assertEqual(self.schedule_service.download_and_parse_schedule.call_count, 2)
         self.assertEqual(self.persistence_service.upsert_event.call_count, 2)
         self.assertEqual(self.persistence_service.__enter__.call_count, 2)
 
     @patch('schedule_parser.services.smart_schedule_service.date', MockDate)
-    def test_update_all_schedules_filters_holidays_and_past_dates(self):
+    @patch('asyncio.sleep')
+    async def test_update_all_schedules_filters_holidays_and_past_dates(self, mock_sleep):
         """
         Test that the service correctly filters out holidays and past dates.
         """
@@ -87,7 +90,7 @@ class TestSmartScheduleService(unittest.TestCase):
 
         self.schedule_service.download_and_parse_schedule.return_value = events
 
-        self.smart_schedule_service.update_all_schedules()
+        await self.smart_schedule_service.update_all_schedules()
 
         self.schedule_service.download_and_parse_schedule.assert_called_once()
         self.persistence_service.__enter__.assert_called_once()

@@ -2,6 +2,7 @@
 This module defines the SmartScheduleService for intelligently updating waste schedules.
 """
 import logging
+import random
 from datetime import date, timedelta
 import holidays
 import asyncio
@@ -28,7 +29,7 @@ class SmartScheduleService:
         self.weeks_to_fetch = weeks_to_fetch
         self.german_holidays = holidays.Germany(subdiv="SN")  # Saxony
 
-    def update_all_schedules(self) -> None:
+    async def update_all_schedules(self) -> None:
         """
         Orchestrates the update process for all unique subscribed locations.
         """
@@ -74,6 +75,11 @@ class SmartScheduleService:
             except Exception as e:
                 logger.exception(f"An unexpected error occurred while updating schedule for {original_address} (ID: {standort_id}): {e}")
 
+            # Add a randomized delay to avoid rate-limiting
+            delay = random.uniform(60, 3600)  # 1 to 60 minutes
+            logger.info(f"Waiting for {delay:.2f} seconds before next download.")
+            await asyncio.sleep(delay)
+
         logger.info("Smart schedule update completed.")
 
     async def run_scheduler(self) -> None:
@@ -83,7 +89,7 @@ class SmartScheduleService:
         while True:
             try:
                 logger.info("Running smart schedule update...")
-                self.update_all_schedules()
+                await self.update_all_schedules()
                 logger.info("Smart schedule update finished.")
             except Exception as e:
                 logger.exception(f"An error occurred during the smart schedule update: {e}")
