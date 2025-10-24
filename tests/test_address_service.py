@@ -52,3 +52,10 @@ def test_find_address_matches_no_match(temp_address_db):
     service = AddressService(db_path=temp_address_db)
     matches = service.find_address_matches("xyz")
     assert len(matches) == 0
+
+
+def test_address_service_db_not_found():
+    """Tests that a FileNotFoundError is raised if the database does not exist."""
+    service = AddressService(db_path="/non/existent/path.db")
+    with pytest.raises(FileNotFoundError):
+        service.get_address_id("any address")
