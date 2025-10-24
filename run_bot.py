@@ -11,6 +11,7 @@ from schedule_parser.config import TELEGRAM_BOT_TOKEN
 from schedule_parser.db_manager import init_db
 from telegram_bot.bot import main as bot_main
 from telegram_bot.scheduler import scheduler
+from smart_schedule import run_scheduler as smart_scheduler
 from telegram_bot.logging_config import setup_database_logging
 from build_cache import build_address_database
 
@@ -57,9 +58,10 @@ async def main():
     # Setup handlers in bot_main
     bot_main(TELEGRAM_BOT_TOKEN, application)
 
-    # Run the scheduler and bot polling concurrently
+    # Run the schedulers and bot polling concurrently
     await asyncio.gather(
         scheduler(application.bot),
+        smart_scheduler(),
         application.run_polling()
     )
 

@@ -200,3 +200,38 @@ class PersistenceService:
         cur = self._get_cursor()
         cur.execute("SELECT * FROM logs ORDER BY timestamp DESC LIMIT 100") # Limit to 100 to avoid overwhelming the dashboard
         return cur.fetchall()
+
+    def get_unique_subscribed_locations(self) -> List[dict]:
+        """
+        Retrieves a list of unique locations (address and address_id)
+        that have at least one active subscription.
+        """
+        # This query joins the subscriptions with the address lookup table
+        # to get the necessary details for the schedule download.
+        # It requires attaching the address_lookup.db database.
+        cur = self._get_cursor()
+
+        # Attach the address lookup database to the current connection
+        # to perform a cross-database query.
+        lookup_db_path = "address_lookup.db"
+        cur.execute(f"ATTACH DATABASE '{lookup_db_path}' AS address_db")
+
+        query = """
+            SELECT DISTINCT
+                sub.address_id,
+                addr.address
+            FROM
+                main.subscriptions AS sub
+            JOIN
+                address_db.addresses AS addr ON sub.address_id = addr.address_id
+            WHERE
+                sub.is_active = 1;
+        """
+
+        cur.execute(query)
+        locations = [dict(row) for row in cur.fetchall()]
+
+        # Detach the database after the query is complete.
+        cur.execute("DETACH DATABASE address_db")
+
+        return locations
