@@ -164,3 +164,35 @@ class WasteManagementFacade:
                 "logs": [],
                 "error": str(e),
             }
+
+    # --- Notification Cycle Methods ---
+
+    def get_due_notifications(self) -> List[dict]:
+        """Gets all notifications that are due to be sent."""
+        try:
+            return self.notification_service.get_due_notifications()
+        except Exception as e:
+            logger.exception("Failed to get due notifications.")
+            return []
+
+    def log_pending_notification(self, subscription_id: int) -> Optional[int]:
+        """Logs that a notification is about to be sent."""
+        try:
+            return self.notification_service.log_pending_notification(subscription_id)
+        except Exception as e:
+            logger.exception(f"Failed to log pending notification for sub_id {subscription_id}.")
+            return None
+
+    def update_notification_log(self, log_id: int, status: str, error_message: Optional[str] = None) -> None:
+        """Updates the status of a sent notification."""
+        try:
+            self.notification_service.update_notification_log(log_id, status, error_message)
+        except Exception as e:
+            logger.exception(f"Failed to update notification log for log_id {log_id}.")
+
+    def update_last_notified_date(self, subscription_id: int, collection_date: date) -> None:
+        """Updates the last notified date for a subscription."""
+        try:
+            self.subscription_service.update_last_notified(subscription_id, collection_date.isoformat())
+        except Exception as e:
+            logger.exception(f"Failed to update last notified date for sub_id {subscription_id}.")
