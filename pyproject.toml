@@ -15,6 +15,7 @@ pandas = "^2.3.3"
 python-telegram-bot = "^21.4"
 thefuzz = "^0.22.1"
 python-levenshtein = "^0.25.1"
+holidays = "^0.83"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.4.2"
