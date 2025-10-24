@@ -7,12 +7,13 @@ from datetime import date, timedelta, datetime
 from telegram import Bot
 from .subscription_manager import get_all_subscriptions, update_last_notified
 from .address_matcher import get_address_by_id
+from schedule_parser.config import WASTE_SCHEDULE_DB_PATH
 
 async def send_notification(bot: Bot, chat_id: int, message: str) -> None:
     """Sends a notification to a user."""
     await bot.send_message(chat_id=chat_id, text=message)
 
-def get_upcoming_collections(address_id: int, db_path: str = "waste_schedule.db") -> list:
+def get_upcoming_collections(address_id: int, db_path: str = WASTE_SCHEDULE_DB_PATH) -> list:
     """Retrieve upcoming waste collections for a given address."""
     address = get_address_by_id(address_id)
     if not address:
@@ -71,7 +72,7 @@ async def check_and_send_notifications(bot: Bot) -> None:
         # This function will be implemented in the next step
         await send_bulk_notifications(bot, notification_tasks)
 
-def log_pending_notification(sub_id: int, db_path: str = "waste_schedule.db") -> int:
+def log_pending_notification(sub_id: int, db_path: str = WASTE_SCHEDULE_DB_PATH) -> int:
     """Logs a pending notification and returns the log ID."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -89,7 +90,7 @@ def update_notification_log(
     log_id: int,
     status: str,
     error_message: str = None,
-    db_path: str = "waste_schedule.db",
+    db_path: str = WASTE_SCHEDULE_DB_PATH,
 ) -> None:
     """Updates the status of a notification log."""
     conn = sqlite3.connect(db_path)

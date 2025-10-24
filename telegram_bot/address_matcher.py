@@ -4,8 +4,9 @@ This module handles matching user-provided addresses against the address databas
 import sqlite3
 from typing import List, Tuple
 from thefuzz import process
+from schedule_parser.config import ADDRESS_LOOKUP_DB_PATH
 
-def find_address_matches(query: str, db_path: str = "address_lookup.db") -> List[Tuple[str, int]]:
+def find_address_matches(query: str, db_path: str = ADDRESS_LOOKUP_DB_PATH) -> List[Tuple[str, int]]:
     """
     Finds address matches for a given query, first trying an exact match,
     then falling back to fuzzy matching.
@@ -43,7 +44,7 @@ def find_address_matches(query: str, db_path: str = "address_lookup.db") -> List
     conn.close()
     return results
 
-def get_address_by_id(address_id: int, db_path: str = "address_lookup.db") -> str | None:
+def get_address_by_id(address_id: int, db_path: str = ADDRESS_LOOKUP_DB_PATH) -> str | None:
     """Retrieves an address by its ID."""
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
