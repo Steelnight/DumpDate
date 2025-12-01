@@ -1,23 +1,25 @@
 """
 This module contains a Flask-based web dashboard to display KPIs and system logs.
 """
+
 from flask import Flask, render_template
 
 from schedule_parser.facade import WasteManagementFacade
 
 app = Flask(__name__)
 
-@app.route('/')
+
+@app.route("/")
 def dashboard():
     """Renders the main dashboard page."""
     facade: WasteManagementFacade = app.config["FACADE"]
     data = facade.get_dashboard_data()
     return render_template(
-        'dashboard.html',
-        events=data.get('events', []),
-        subscriptions=data.get('subscriptions', []),
-        logs=data.get('logs', []),
-        error=data.get('error')
+        "dashboard.html",
+        events=data.get("events", []),
+        subscriptions=data.get("subscriptions", []),
+        logs=data.get("logs", []),
+        error=data.get("error"),
     )
 
 

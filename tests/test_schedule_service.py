@@ -1,13 +1,15 @@
 """
 Unit tests for the ScheduleService.
 """
-import pytest
-from unittest.mock import patch, MagicMock
+
 from datetime import date
+from unittest.mock import MagicMock, patch
+
+import pytest
 import requests
 
-from schedule_parser.services.schedule_service import ScheduleService
 from schedule_parser.exceptions import DownloadError, ParsingError
+from schedule_parser.services.schedule_service import ScheduleService
 
 # A sample valid ICS file content for mocking
 SAMPLE_ICS_CONTENT = """
@@ -36,7 +38,8 @@ END:VEVENT
 END:VCALENDAR
 """
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_download_and_parse_success(mock_requests_get):
     """
     Tests the successful download and parsing of a schedule.
@@ -65,13 +68,16 @@ def test_download_and_parse_success(mock_requests_get):
     assert events[0].original_address == "Test Straße 1"
     mock_requests_get.assert_called_once()
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_download_failure_raises_download_error(mock_requests_get):
     """
     Tests that a DownloadError is raised after retries on network failure.
     """
     # Arrange
-    mock_requests_get.side_effect = requests.exceptions.RequestException("Network error")
+    mock_requests_get.side_effect = requests.exceptions.RequestException(
+        "Network error"
+    )
     # Make retries fast for the test
     service = ScheduleService(max_retries=2, retry_delay=0.1)
 
@@ -85,7 +91,8 @@ def test_download_failure_raises_download_error(mock_requests_get):
         )
     assert mock_requests_get.call_count == 2
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_download_http_error_raises_download_error(mock_requests_get):
     """
     Tests that a DownloadError is raised after retries on HTTP error.
@@ -93,7 +100,9 @@ def test_download_http_error_raises_download_error(mock_requests_get):
     # Arrange
     mock_response = MagicMock()
     mock_response.status_code = 404
-    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError("Not Found")
+    mock_response.raise_for_status.side_effect = requests.exceptions.HTTPError(
+        "Not Found"
+    )
     mock_requests_get.return_value = mock_response
     # Make retries fast for the test
     service = ScheduleService(max_retries=2, retry_delay=0.1)
@@ -108,7 +117,8 @@ def test_download_http_error_raises_download_error(mock_requests_get):
         )
     assert mock_requests_get.call_count == 2
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_parsing_failure_raises_parsing_error(mock_requests_get):
     """
     Tests that a ParsingError is raised for invalid ICS content.
@@ -129,7 +139,8 @@ def test_parsing_failure_raises_parsing_error(mock_requests_get):
             original_address="Test Straße 1",
         )
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_empty_ics_file(mock_requests_get):
     """
     Tests that an empty list is returned for a valid but empty ICS file.
@@ -152,7 +163,8 @@ def test_empty_ics_file(mock_requests_get):
     # Assert
     assert len(events) == 0
 
-@patch('schedule_parser.services.schedule_service.requests.get')
+
+@patch("schedule_parser.services.schedule_service.requests.get")
 def test_ics_file_with_invalid_event(mock_requests_get):
     """
     Tests that an event is skipped if it is missing the DTSTART field.

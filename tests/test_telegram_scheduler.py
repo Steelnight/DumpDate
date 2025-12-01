@@ -1,8 +1,8 @@
 """
 Tests for the Telegram bot's scheduler.
 """
-import asyncio
-from unittest.mock import MagicMock, AsyncMock
+
+from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 
@@ -44,8 +44,18 @@ async def test_check_and_send_notifications_sends_successfully(mock_facade, mock
     Tests that notifications are sent successfully when there are due notifications.
     """
     notifications = [
-        {"subscription_id": 1, "chat_id": 123, "message": "Test message 1", "collection_date": "2025-10-24"},
-        {"subscription_id": 2, "chat_id": 456, "message": "Test message 2", "collection_date": "2025-10-25"},
+        {
+            "subscription_id": 1,
+            "chat_id": 123,
+            "message": "Test message 1",
+            "collection_date": "2025-10-24",
+        },
+        {
+            "subscription_id": 2,
+            "chat_id": 456,
+            "message": "Test message 2",
+            "collection_date": "2025-10-25",
+        },
     ]
     mock_facade.get_due_notifications.return_value = notifications
 
@@ -62,7 +72,12 @@ async def test_check_and_send_notifications_handles_failure(mock_facade, mock_bo
     Tests that the scheduler handles failures when sending notifications.
     """
     notifications = [
-        {"subscription_id": 1, "chat_id": 123, "message": "Test message 1", "collection_date": "2025-10-24"},
+        {
+            "subscription_id": 1,
+            "chat_id": 123,
+            "message": "Test message 1",
+            "collection_date": "2025-10-24",
+        },
     ]
     mock_facade.get_due_notifications.return_value = notifications
     mock_bot.send_message.side_effect = Exception("Test error")

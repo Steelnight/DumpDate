@@ -1,9 +1,11 @@
 """
 This module defines the AddressService for looking up address IDs.
 """
+
 import logging
 import sqlite3
 from typing import List, Tuple
+
 from thefuzz import process
 
 # Get a logger instance for this module
@@ -40,7 +42,10 @@ class AddressService:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             normalized_address = address.lower().strip()
-            cursor.execute("SELECT address_id FROM addresses WHERE address = ?", (normalized_address,))
+            cursor.execute(
+                "SELECT address_id FROM addresses WHERE address = ?",
+                (normalized_address,),
+            )
             result = cursor.fetchone()
             conn.close()
 
@@ -53,7 +58,9 @@ class AddressService:
                 raise ValueError(f"Address not found: {address}")
 
         except sqlite3.OperationalError as e:
-            logger.error(f"Database error, likely the DB file is missing. Run the build_cache.py script. Error: {e}")
+            logger.error(
+                f"Database error, likely the DB file is missing. Run the build_cache.py script. Error: {e}"
+            )
             raise FileNotFoundError(f"Database file '{self.db_path}' not found.") from e
 
     def find_address_matches(self, query: str) -> List[Tuple[str, int]]:
@@ -66,7 +73,10 @@ class AddressService:
             cur = conn.cursor()
 
             # Try exact match first
-            cur.execute("SELECT address, address_id FROM addresses WHERE address = ?", (query.lower().strip(),))
+            cur.execute(
+                "SELECT address, address_id FROM addresses WHERE address = ?",
+                (query.lower().strip(),),
+            )
             exact_match = cur.fetchone()
             if exact_match:
                 conn.close()
@@ -76,7 +86,9 @@ class AddressService:
             cur.execute("SELECT address FROM addresses")
             all_addresses = [row[0] for row in cur.fetchall()]
 
-            matches = process.extractBests(query, all_addresses, limit=5, score_cutoff=80)
+            matches = process.extractBests(
+                query, all_addresses, limit=5, score_cutoff=80
+            )
 
             if not matches:
                 conn.close()
@@ -84,7 +96,10 @@ class AddressService:
 
             results = []
             for match, score in matches:
-                cur.execute("SELECT address, address_id FROM addresses WHERE address = ?", (match,))
+                cur.execute(
+                    "SELECT address, address_id FROM addresses WHERE address = ?",
+                    (match,),
+                )
                 result = cur.fetchone()
                 if result:
                     results.append(result)

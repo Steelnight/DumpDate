@@ -1,14 +1,17 @@
 """
 This module provides a factory for creating and configuring the application's core components.
 """
-from .logging_config import setup_database_logging
+
 from schedule_parser.facade import WasteManagementFacade
 from schedule_parser.services.address_service import AddressService
+from schedule_parser.services.notification_service import NotificationService
 from schedule_parser.services.persistence_service import PersistenceService
 from schedule_parser.services.schedule_service import ScheduleService
+from schedule_parser.services.smart_schedule_service import \
+    SmartScheduleService
 from schedule_parser.services.subscription_service import SubscriptionService
-from schedule_parser.services.notification_service import NotificationService
-from schedule_parser.services.smart_schedule_service import SmartScheduleService
+
+from .logging_config import setup_database_logging
 
 
 def initialize_app():

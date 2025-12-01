@@ -11,10 +11,8 @@ packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include 
 python = "^3.12"
 icalendar = "^5.0.12"
 requests = "^2.31.0"
-pandas = "^2.3.3"
 python-telegram-bot = "^21.4"
 thefuzz = "^0.22.1"
-python-levenshtein = "^0.25.1"
 holidays = "^0.83"
 
 [tool.poetry.group.dev.dependencies]
@@ -22,8 +20,6 @@ pytest = "^8.4.2"
 black = "^25.9.0"
 isort = "^7.0.0"
 ruff = "^0.14.1"
-playwright = "^1.55.0"
-Pillow = "^12.0.0"
 pytest-asyncio = "^1.2.0"
 
 [tool.poetry.group.dashboard.dependencies]

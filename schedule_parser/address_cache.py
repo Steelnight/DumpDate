@@ -1,13 +1,17 @@
-import sqlite3
 import json
 import logging
-import requests
 import os
+import sqlite3
+
+import requests
 
 from schedule_parser.config import ADDRESS_API_URL, ADDRESS_LOOKUP_DB_PATH
 
 # Configure logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
 
 def build_address_database():
     """
@@ -52,13 +56,17 @@ def build_address_database():
 
         conn = sqlite3.connect(ADDRESS_LOOKUP_DB_PATH)
         cursor = conn.cursor()
-        cursor.execute("CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)")
+        cursor.execute(
+            "CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)"
+        )
         cursor.executemany("INSERT INTO addresses VALUES (?, ?)", address_data)
 
         conn.commit()
         conn.close()
 
-        logging.info(f"Successfully created and populated address database: {ADDRESS_LOOKUP_DB_PATH}")
+        logging.info(
+            f"Successfully created and populated address database: {ADDRESS_LOOKUP_DB_PATH}"
+        )
 
     except requests.exceptions.RequestException as e:
         logging.error(f"Failed to download address data: {e}")
