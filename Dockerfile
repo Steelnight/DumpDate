@@ -1,5 +1,5 @@
 # Stage 1: Builder
-FROM python:3.12-slim as builder
+FROM python:3.14-slim as builder
 
 # Install poetry
 RUN pip install poetry
@@ -14,7 +14,7 @@ COPY poetry.lock pyproject.toml ./
 RUN poetry install --no-root --no-dev
 
 # Stage 2: Final Image
-FROM python:3.12-slim
+FROM python:3.14-slim
 
 # Set working directory
 WORKDIR /app
