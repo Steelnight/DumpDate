@@ -2,10 +2,11 @@ import argparse
 import asyncio
 import logging
 
-from .app_factory import create_facade, initialize_app
+from dashboard.app import run_dashboard
 from schedule_parser.address_cache import build_address_database
 from telegram_bot.bot import main as run_bot
-from dashboard.app import run_dashboard
+
+from .app_factory import create_facade, initialize_app
 
 logger = logging.getLogger(__name__)
 

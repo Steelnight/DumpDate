@@ -8,26 +8,22 @@ readme = "README.md"
 packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}, {include = "dump_date"}]
 
 [tool.poetry.dependencies]
-python = "^3.12"
-icalendar = "^5.0.12"
-requests = "^2.31.0"
-pandas = "^2.3.3"
-python-telegram-bot = "^21.4"
+python = ">=3.12"
+icalendar = "^6.3.2"
+requests = "^2.32.5"
+python-telegram-bot = "^22.5"
 thefuzz = "^0.22.1"
-python-levenshtein = "^0.25.1"
-holidays = "^0.83"
+holidays = "^0.85"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.4.2"
-black = "^25.9.0"
+pytest = "^9.0.1"
+black = "^25.11.0"
 isort = "^7.0.0"
-ruff = "^0.14.1"
-playwright = "^1.55.0"
-Pillow = "^12.0.0"
-pytest-asyncio = "^1.2.0"
+ruff = "^0.14.7"
+pytest-asyncio = "^1.3.0"
 
 [tool.poetry.group.dashboard.dependencies]
-Flask = "^3.0.3"
+Flask = "^3.1.2"
 
 [build-system]
 requires = ["poetry-core"]

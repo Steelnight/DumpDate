@@ -1,6 +1,7 @@
 """
 This module defines the ScheduleService for downloading and parsing iCal files.
 """
+
 import logging
 import re
 import time
@@ -10,13 +11,10 @@ from typing import List
 import requests
 from icalendar import Calendar
 
+from ..config import (ICAL_API_URL, SCHEDULE_SERVICE_MAX_RETRIES,
+                      SCHEDULE_SERVICE_RETRY_DELAY)
 from ..exceptions import DownloadError, ParsingError
 from ..models import WasteEvent
-from ..config import (
-    ICAL_API_URL,
-    SCHEDULE_SERVICE_MAX_RETRIES,
-    SCHEDULE_SERVICE_RETRY_DELAY,
-)
 
 # Get a logger instance for this module
 logger = logging.getLogger(__name__)
@@ -106,13 +104,18 @@ class ScheduleService:
                 uid = str(component.get("UID"))
                 dt_start = component.get("DTSTART")
                 if dt_start is None:
-                    logger.warning(f"Skipping event with UID {uid} due to missing DTSTART.")
+                    logger.warning(
+                        f"Skipping event with UID {uid} due to missing DTSTART."
+                    )
                     continue
 
                 event_date = dt_start.dt.strftime("%Y-%m-%d")
                 location = str(component.get("LOCATION", "")).strip()
                 description = (
-                    str(component.get("DESCRIPTION", "")).replace("\\n", "\n").replace("\\\\", "\\").strip()
+                    str(component.get("DESCRIPTION", ""))
+                    .replace("\\n", "\n")
+                    .replace("\\\\", "\\")
+                    .strip()
                 )
                 summary = str(component.get("SUMMARY", "")).strip()
 

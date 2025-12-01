@@ -1,10 +1,13 @@
 """
 Unit tests for the AddressService.
 """
-import pytest
+
 import sqlite3
 
+import pytest
+
 from schedule_parser.services.address_service import AddressService
+
 
 @pytest.fixture
 def temp_address_db(tmp_path):
@@ -20,17 +23,20 @@ def temp_address_db(tmp_path):
     conn.close()
     return str(db_path)
 
+
 def test_get_address_id_success(temp_address_db):
     """Tests finding an address ID with an exact match."""
     service = AddressService(db_path=temp_address_db)
     address_id = service.get_address_id("test straße 1")
     assert address_id == 1
 
+
 def test_get_address_id_not_found_raises_error(temp_address_db):
     """Tests that a ValueError is raised for a non-existent address."""
     service = AddressService(db_path=temp_address_db)
     with pytest.raises(ValueError, match="Address not found"):
         service.get_address_id("nicht-existent-straße")
+
 
 def test_find_address_matches_exact(temp_address_db):
     """Tests finding an exact match with find_address_matches."""
@@ -39,6 +45,7 @@ def test_find_address_matches_exact(temp_address_db):
     assert len(matches) == 1
     assert matches[0] == ("musterweg 2", 2)
 
+
 def test_find_address_matches_fuzzy(temp_address_db):
     """Tests finding a fuzzy match."""
     service = AddressService(db_path=temp_address_db)
@@ -46,6 +53,7 @@ def test_find_address_matches_fuzzy(temp_address_db):
     matches = service.find_address_matches("beispiel")
     assert len(matches) > 0
     assert matches[0][0] == "beispiel-allee 3"
+
 
 def test_find_address_matches_no_match(temp_address_db):
     """Tests that an empty list is returned when no match is found."""

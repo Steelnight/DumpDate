@@ -1,10 +1,13 @@
 """
 This module handles the scheduling and sending of notifications using the WasteManagementFacade.
 """
+
 import asyncio
 import logging
+
 from telegram import Bot
 from telegram.ext import Application
+
 from schedule_parser.facade import WasteManagementFacade
 
 logger = logging.getLogger(__name__)
@@ -32,18 +35,21 @@ async def check_and_send_notifications(facade: WasteManagementFacade, bot: Bot) 
     # For this example, asyncio.gather with error handling is sufficient.
     chunk_size = 30
     for i in range(0, len(notification_tasks), chunk_size):
-        chunk = notification_tasks[i:i + chunk_size]
+        chunk = notification_tasks[i : i + chunk_size]
 
         # Log pending notifications and prepare coroutines
         coroutines = []
-        log_ids = {} # map coroutine to log_id
+        log_ids = {}  # map coroutine to log_id
 
         for task in chunk:
             log_id = facade.log_pending_notification(task["subscription_id"])
             if log_id:
                 coro = send_notification(bot, task["chat_id"], task["message"])
                 coroutines.append(coro)
-                log_ids[coro] = (log_id, task) # Store log_id and task for result processing
+                log_ids[coro] = (
+                    log_id,
+                    task,
+                )  # Store log_id and task for result processing
 
         # Run send operations concurrently
         results = await asyncio.gather(*coroutines, return_exceptions=True)
@@ -57,11 +63,15 @@ async def check_and_send_notifications(facade: WasteManagementFacade, bot: Bot) 
                     collection_date=task_info["collection_date"],
                 )
                 facade.update_notification_log(log_id, "success")
-                logger.info(f"Successfully sent notification to chat_id {task_info['chat_id']}.")
+                logger.info(
+                    f"Successfully sent notification to chat_id {task_info['chat_id']}."
+                )
             else:
                 error_message = str(result)
                 facade.update_notification_log(log_id, "failure", error_message)
-                logger.error(f"Failed to send notification to chat_id {task_info['chat_id']}: {error_message}")
+                logger.error(
+                    f"Failed to send notification to chat_id {task_info['chat_id']}: {error_message}"
+                )
 
         # Wait for 1 second before processing the next chunk to respect rate limits
         if i + chunk_size < len(notification_tasks):
@@ -78,7 +88,9 @@ async def scheduler(facade: WasteManagementFacade, application: Application) -> 
         try:
             await check_and_send_notifications(facade, bot)
         except Exception as e:
-            logger.exception(f"An error occurred in the notification scheduler loop: {e}")
+            logger.exception(
+                f"An error occurred in the notification scheduler loop: {e}"
+            )
         # Wait for 1 hour before the next check.
         # In a production environment, this might be a more sophisticated clock-based trigger.
         await asyncio.sleep(3600)

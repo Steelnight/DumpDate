@@ -1,16 +1,21 @@
 """
 This module defines the SmartScheduleService for intelligently updating waste schedules.
 """
+
+import asyncio
 import logging
 from datetime import date, timedelta
+
 import holidays
-import asyncio
+
 from schedule_parser.config import SCHEDULE_UPDATE_INTERVAL_HOURS
+
+from ..exceptions import DownloadError, ParsingError
 from .persistence_service import PersistenceService
 from .schedule_service import ScheduleService
-from ..exceptions import DownloadError, ParsingError
 
 logger = logging.getLogger(__name__)
+
 
 class SmartScheduleService:
     """
@@ -46,7 +51,9 @@ class SmartScheduleService:
             standort_id = location["address_id"]
             original_address = location["address"]
 
-            logger.info(f"Processing schedule for {original_address} (ID: {standort_id}).")
+            logger.info(
+                f"Processing schedule for {original_address} (ID: {standort_id})."
+            )
 
             try:
                 new_events = self.schedule_service.download_and_parse_schedule(
@@ -54,13 +61,17 @@ class SmartScheduleService:
                 )
 
                 if not new_events:
-                    logger.warning(f"No events found for {original_address}. It might be a holiday period or an issue with the source.")
+                    logger.warning(
+                        f"No events found for {original_address}. It might be a holiday period or an issue with the source."
+                    )
                     continue
 
                 # Filter out holidays and past dates
                 valid_events = [
-                    event for event in new_events
-                    if date.fromisoformat(event.date) >= start_date and date.fromisoformat(event.date) not in self.german_holidays
+                    event
+                    for event in new_events
+                    if date.fromisoformat(event.date) >= start_date
+                    and date.fromisoformat(event.date) not in self.german_holidays
                 ]
 
                 with self.persistence_service as db:
@@ -70,9 +81,13 @@ class SmartScheduleService:
                 logger.info(f"Successfully updated schedule for {original_address}.")
 
             except (DownloadError, ParsingError) as e:
-                logger.error(f"Failed to update schedule for {original_address} (ID: {standort_id}): {e}")
+                logger.error(
+                    f"Failed to update schedule for {original_address} (ID: {standort_id}): {e}"
+                )
             except Exception as e:
-                logger.exception(f"An unexpected error occurred while updating schedule for {original_address} (ID: {standort_id}): {e}")
+                logger.exception(
+                    f"An unexpected error occurred while updating schedule for {original_address} (ID: {standort_id}): {e}"
+                )
 
         logger.info("Smart schedule update completed.")
 
@@ -86,7 +101,9 @@ class SmartScheduleService:
                 self.update_all_schedules()
                 logger.info("Smart schedule update finished.")
             except Exception as e:
-                logger.exception(f"An error occurred during the smart schedule update: {e}")
+                logger.exception(
+                    f"An error occurred during the smart schedule update: {e}"
+                )
 
             sleep_duration = SCHEDULE_UPDATE_INTERVAL_HOURS * 3600
             logger.info(f"Sleeping for {SCHEDULE_UPDATE_INTERVAL_HOURS} hours...")

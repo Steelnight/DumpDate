@@ -1,8 +1,9 @@
 """
 This module defines the NotificationService for handling notifications.
 """
+
 from datetime import date, datetime, timedelta
-from typing import List, Dict, Any
+from typing import Any, Dict, List
 
 from .persistence_service import PersistenceService
 
@@ -37,12 +38,18 @@ class NotificationService:
         tomorrow = today + timedelta(days=1)
 
         for sub in subscriptions:
-            address = self._get_address_for_subscription(sub)  # Helper to get address string
+            address = self._get_address_for_subscription(
+                sub
+            )  # Helper to get address string
             if not address:
                 continue
 
             collections = events_by_address.get(address, [])
-            last_notified = date.fromisoformat(sub["last_notified"]) if sub["last_notified"] else None
+            last_notified = (
+                date.fromisoformat(sub["last_notified"])
+                if sub["last_notified"]
+                else None
+            )
 
             for collection in collections:
                 collection_date = date.fromisoformat(collection["date"])
@@ -55,22 +62,32 @@ class NotificationService:
                 notification_time = sub["notification_time"]
 
                 # Evening before notification
-                if notification_time == "evening" and collection_date == tomorrow and now.hour >= 19:
+                if (
+                    notification_time == "evening"
+                    and collection_date == tomorrow
+                    and now.hour >= 19
+                ):
                     emoji = self._get_waste_type_emoji(waste_type)
                     message = f"{emoji} {waste_type} ist für morgen geplant!"
 
                 # Morning of notification
-                elif notification_time == "morning" and collection_date == today and now.hour >= 6:
+                elif (
+                    notification_time == "morning"
+                    and collection_date == today
+                    and now.hour >= 6
+                ):
                     emoji = self._get_waste_type_emoji(waste_type)
                     message = f"{emoji} {waste_type} wird heute abgeholt!"
 
                 if message:
-                    notification_tasks.append({
-                        "subscription_id": sub["id"],
-                        "chat_id": sub["chat_id"],
-                        "message": message,
-                        "collection_date": collection_date,
-                    })
+                    notification_tasks.append(
+                        {
+                            "subscription_id": sub["id"],
+                            "chat_id": sub["chat_id"],
+                            "message": message,
+                            "collection_date": collection_date,
+                        }
+                    )
         return notification_tasks
 
     def _get_address_for_subscription(self, subscription: Dict[str, Any]) -> str:
