@@ -1,7 +1,8 @@
 """
 This module defines the SubscriptionService for managing user subscriptions.
 """
-from typing import List, Tuple
+
+from typing import List
 
 from .persistence_service import PersistenceService
 
@@ -38,7 +39,9 @@ class SubscriptionService:
         with self.persistence as p:
             return p.get_all_active_subscriptions()
 
-    def update_last_notified(self, subscription_id: int, notification_date: str) -> None:
+    def update_last_notified(
+        self, subscription_id: int, notification_date: str
+    ) -> None:
         """Updates the last_notified date for a subscription."""
         with self.persistence as p:
             p.update_subscription_last_notified(subscription_id, notification_date)

@@ -1,18 +1,18 @@
 """
 This module defines the central facade for the waste management application.
 """
+
 import logging
-from datetime import date, timedelta
+from datetime import date
 from typing import List, Optional
 
+from .exceptions import DownloadError, ParsingError
 from .services.address_service import AddressService
 from .services.notification_service import NotificationService
 from .services.persistence_service import PersistenceService
 from .services.schedule_service import ScheduleService
-from .services.subscription_service import SubscriptionService
 from .services.smart_schedule_service import SmartScheduleService
-from .exceptions import DownloadError, ParsingError
-from .models import WasteEvent
+from .services.subscription_service import SubscriptionService
 
 logger = logging.getLogger(__name__)
 
@@ -66,7 +66,9 @@ class WasteManagementFacade:
             ParsingError: If the schedule parsing fails.
         """
         try:
-            logger.info(f"Starting subscription for chat_id {chat_id} and address '{address}'.")
+            logger.info(
+                f"Starting subscription for chat_id {chat_id} and address '{address}'."
+            )
 
             # 1. Find address ID
             address_id = self.address_service.get_address_id(address)
@@ -93,12 +95,16 @@ class WasteManagementFacade:
                 notification_time=notification_time,
             )
 
-            logger.info(f"Successfully subscribed chat_id {chat_id} to address '{address}'.")
+            logger.info(
+                f"Successfully subscribed chat_id {chat_id} to address '{address}'."
+            )
             return True
 
         except (ValueError, FileNotFoundError, DownloadError, ParsingError) as e:
             # Expected errors that the caller (bot) can handle
-            logger.warning(f"A specific error occurred during subscription for chat_id {chat_id}: {e}")
+            logger.warning(
+                f"A specific error occurred during subscription for chat_id {chat_id}: {e}"
+            )
             raise
         except Exception as e:
             # Unexpected errors
@@ -122,7 +128,9 @@ class WasteManagementFacade:
             logger.info(f"Successfully unsubscribed subscription_id {subscription_id}.")
             return True
         except Exception as e:
-            logger.exception(f"Failed to unsubscribe subscription_id {subscription_id}: {e}")
+            logger.exception(
+                f"Failed to unsubscribe subscription_id {subscription_id}: {e}"
+            )
             return False
 
     def find_address_matches(self, query: str) -> List[tuple[str, int]]:
@@ -133,7 +141,9 @@ class WasteManagementFacade:
             # This is an expected error if the cache hasn't been built
             raise
         except Exception as e:
-            logger.exception(f"An unexpected error occurred while finding address matches for query '{query}': {e}")
+            logger.exception(
+                f"An unexpected error occurred while finding address matches for query '{query}': {e}"
+            )
             return []
 
     def get_address_by_id(self, address_id: int) -> Optional[str]:
@@ -174,7 +184,7 @@ class WasteManagementFacade:
         """Gets all notifications that are due to be sent."""
         try:
             return self.notification_service.get_due_notifications()
-        except Exception as e:
+        except Exception:
             logger.exception("Failed to get due notifications.")
             return []
 
@@ -182,23 +192,35 @@ class WasteManagementFacade:
         """Logs that a notification is about to be sent."""
         try:
             return self.notification_service.log_pending_notification(subscription_id)
-        except Exception as e:
-            logger.exception(f"Failed to log pending notification for sub_id {subscription_id}.")
+        except Exception:
+            logger.exception(
+                f"Failed to log pending notification for sub_id {subscription_id}."
+            )
             return None
 
-    def update_notification_log(self, log_id: int, status: str, error_message: Optional[str] = None) -> None:
+    def update_notification_log(
+        self, log_id: int, status: str, error_message: Optional[str] = None
+    ) -> None:
         """Updates the status of a sent notification."""
         try:
-            self.notification_service.update_notification_log(log_id, status, error_message)
-        except Exception as e:
+            self.notification_service.update_notification_log(
+                log_id, status, error_message
+            )
+        except Exception:
             logger.exception(f"Failed to update notification log for log_id {log_id}.")
 
-    def update_last_notified_date(self, subscription_id: int, collection_date: date) -> None:
+    def update_last_notified_date(
+        self, subscription_id: int, collection_date: date
+    ) -> None:
         """Updates the last notified date for a subscription."""
         try:
-            self.subscription_service.update_last_notified(subscription_id, collection_date.isoformat())
-        except Exception as e:
-            logger.exception(f"Failed to update last notified date for sub_id {subscription_id}.")
+            self.subscription_service.update_last_notified(
+                subscription_id, collection_date.isoformat()
+            )
+        except Exception:
+            logger.exception(
+                f"Failed to update last notified date for sub_id {subscription_id}."
+            )
 
     def get_next_pickup_for_user(self, chat_id: int) -> List[dict]:
         """Gets the next pickup for each of a user's subscriptions."""
@@ -211,7 +233,9 @@ class WasteManagementFacade:
 
         with self.persistence_service as p:
             for sub in subscriptions:
-                event = p.get_next_waste_event_for_subscription(sub["address_id"], today)
+                event = p.get_next_waste_event_for_subscription(
+                    sub["address_id"], today
+                )
                 if event:
                     address = self.get_address_by_id(sub["address_id"])
                     next_pickups.append({"address": address, "event": event})

@@ -1,6 +1,7 @@
 """
 This module defines the data models for the waste schedule parser.
 """
+
 import hashlib
 from dataclasses import dataclass
 

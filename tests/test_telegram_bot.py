@@ -1,28 +1,20 @@
 """
 Tests for the main Telegram bot conversation handlers.
 """
-import pytest
+
 from unittest.mock import AsyncMock, MagicMock
 
-from telegram import Update, User, Message, Chat
+import pytest
+from telegram import Chat, Message, Update, User
 from telegram.ext import ConversationHandler
 
-from telegram_bot.context import CustomContext
 from schedule_parser.facade import WasteManagementFacade
-from telegram_bot.bot import (
-    ADDRESS,
-    CONFIRM_ADDRESS,
-    NOTIFICATION_TIME,
-    SELECT_SUB,
-    subscribe,
-    handle_address_input,
-    confirm_address,
-    set_notification_time,
-    unsubscribe,
-    select_sub_to_unsubscribe,
-    my_subscriptions,
-    next_pickup
-)
+from telegram_bot.bot import (ADDRESS, CONFIRM_ADDRESS, NOTIFICATION_TIME,
+                              SELECT_SUB, confirm_address,
+                              handle_address_input, my_subscriptions,
+                              next_pickup, select_sub_to_unsubscribe,
+                              set_notification_time, subscribe, unsubscribe)
+from telegram_bot.context import CustomContext
 
 
 @pytest.fixture
@@ -51,7 +43,9 @@ def mock_context():
 async def test_subscribe_starts_conversation(mock_update, mock_context):
     """Tests that the /subscribe command starts the conversation."""
     result = await subscribe(mock_update, mock_context)
-    mock_update.message.reply_text.assert_called_with("Bitte gib deine Adresse ein (z.B. 'Test Straße 1').")
+    mock_update.message.reply_text.assert_called_with(
+        "Bitte gib deine Adresse ein (z.B. 'Test Straße 1')."
+    )
     assert result == ADDRESS
 
 
@@ -61,7 +55,9 @@ async def test_handle_address_input_no_matches(mock_update, mock_context):
     mock_context.facade.find_address_matches.return_value = []
     mock_update.message.text = "Unknown Street 123"
     result = await handle_address_input(mock_update, mock_context)
-    mock_update.message.reply_text.assert_called_with("Leider konnte keine passende Adresse gefunden werden. Bitte versuche es erneut.")
+    mock_update.message.reply_text.assert_called_with(
+        "Leider konnte keine passende Adresse gefunden werden. Bitte versuche es erneut."
+    )
     assert result == ADDRESS
 
 
@@ -122,7 +118,9 @@ async def test_my_subscriptions_no_subscriptions(mock_update, mock_context):
     """Tests that the /mysubscriptions command handles no subscriptions."""
     mock_context.facade.get_user_subscriptions.return_value = []
     await my_subscriptions(mock_update, mock_context)
-    mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Benachrichtigungen.")
+    mock_update.message.reply_text.assert_called_with(
+        "Du hast keine aktiven Benachrichtigungen."
+    )
 
 
 @pytest.mark.asyncio
@@ -142,7 +140,9 @@ async def test_unsubscribe_no_subscriptions(mock_update, mock_context):
     """Tests that the /unsubscribe command handles no subscriptions."""
     mock_context.facade.get_user_subscriptions.return_value = []
     result = await unsubscribe(mock_update, mock_context)
-    mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Benachrichtigungen zum Abbestellen.")
+    mock_update.message.reply_text.assert_called_with(
+        "Du hast keine aktiven Benachrichtigungen zum Abbestellen."
+    )
     assert result == ConversationHandler.END
 
 
@@ -180,7 +180,9 @@ async def test_next_pickup_no_pickups(mock_update, mock_context):
     """Tests that the /nextpickup command handles no pickups."""
     mock_context.facade.get_next_pickup_for_user.return_value = []
     await next_pickup(mock_update, mock_context)
-    mock_update.message.reply_text.assert_called_with("Du hast keine aktiven Abonnements oder es stehen keine Abholungen an.")
+    mock_update.message.reply_text.assert_called_with(
+        "Du hast keine aktiven Abonnements oder es stehen keine Abholungen an."
+    )
 
 
 @pytest.mark.asyncio
@@ -195,4 +197,6 @@ async def test_next_pickup_with_pickups(mock_update, mock_context):
     mock_context.facade.get_next_pickup_for_user.return_value = pickups
     await next_pickup(mock_update, mock_context)
     expected_message = "<b>Nächste Abholungen:</b>\n\n📍 <b>Test Straße 1</b>\n   ⚫ Restabfall am 2025-10-26\n\n"
-    mock_update.message.reply_text.assert_called_with(expected_message, parse_mode='HTML')
+    mock_update.message.reply_text.assert_called_with(
+        expected_message, parse_mode="HTML"
+    )

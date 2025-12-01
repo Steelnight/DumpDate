@@ -1,11 +1,14 @@
 """
 Unit tests for the PersistenceService.
 """
-import pytest
+
 import sqlite3
 
-from schedule_parser.services.persistence_service import PersistenceService
+import pytest
+
 from schedule_parser.models import WasteEvent
+from schedule_parser.services.persistence_service import PersistenceService
+
 
 @pytest.fixture
 def temp_main_db(tmp_path):
@@ -16,16 +19,21 @@ def temp_main_db(tmp_path):
         p.init_db()
     return str(db_path)
 
+
 def test_init_db_creates_tables(temp_main_db):
     """Tests that all tables are created by init_db."""
     conn = sqlite3.connect(temp_main_db)
     cur = conn.cursor()
-    tables = [row[0] for row in cur.execute("SELECT name FROM sqlite_master WHERE type='table'")]
+    tables = [
+        row[0]
+        for row in cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+    ]
     conn.close()
     assert "waste_events" in tables
     assert "subscriptions" in tables
     assert "logs" in tables
     assert "notification_logs" in tables
+
 
 def test_upsert_event_insert(temp_main_db):
     """Tests inserting a new event."""
@@ -41,11 +49,14 @@ def test_upsert_event_insert(temp_main_db):
     assert cur.fetchone() is not None
     conn.close()
 
+
 def test_upsert_event_update(temp_main_db):
     """Tests updating an existing event."""
     service = PersistenceService(db_path=temp_main_db)
     event1 = WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr1")
-    event2 = WasteEvent("uid1", "2023-10-28", "loc", "Bio", "", "", "addr2") # Same UID, different data
+    event2 = WasteEvent(
+        "uid1", "2023-10-28", "loc", "Bio", "", "", "addr2"
+    )  # Same UID, different data
 
     with service as p:
         p.upsert_event(event1)
@@ -53,11 +64,14 @@ def test_upsert_event_update(temp_main_db):
 
     conn = sqlite3.connect(temp_main_db)
     cur = conn.cursor()
-    cur.execute("SELECT waste_type, original_address FROM waste_events WHERE uid = 'uid1'")
+    cur.execute(
+        "SELECT waste_type, original_address FROM waste_events WHERE uid = 'uid1'"
+    )
     row = cur.fetchone()
     conn.close()
     assert row[0] == "Bio"
     assert row[1] == "addr2"
+
 
 def test_subscription_workflow(temp_main_db):
     """Tests the full subscription and notification log workflow."""

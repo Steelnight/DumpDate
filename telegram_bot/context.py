@@ -1,6 +1,7 @@
 """
 This module defines a custom context class for the Telegram bot.
 """
+
 from telegram.ext import CallbackContext, ExtBot
 
 from schedule_parser.facade import WasteManagementFacade
