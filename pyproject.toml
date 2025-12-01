@@ -5,7 +5,7 @@ description = "DumpDate is a smart reminder bot that keeps track of the local ga
 authors = ["Jules <you@example.com>"]
 license = "MIT"
 readme = "README.md"
-packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}]
+packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}, {include = "dump_date"}]
 
 [tool.poetry.dependencies]
 python = "^3.12"
