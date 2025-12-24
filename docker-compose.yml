@@ -13,7 +13,8 @@ services:
   bot:
     build: .
     depends_on:
-      - cache-builder
+      cache-builder:
+        condition: service_completed_successfully
     command: ["python", "-m", "dump_date.main", "bot"]
     volumes:
       - .:/app
