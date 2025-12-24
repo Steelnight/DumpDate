@@ -318,10 +318,7 @@ def record_bot_start_time():
 
 async def main(facade_instance: WasteManagementFacade):
     """Initializes and runs the bot and scheduler."""
-    # Build the address cache database
-    build_address_database()
-
-    # Record the bot start time
+     # Record the bot start time
     record_bot_start_time()
 
     if not TELEGRAM_BOT_TOKEN:
@@ -332,7 +329,6 @@ async def main(facade_instance: WasteManagementFacade):
     rate_limiter = AIORateLimiter(
         overall_max_rate=TELEGRAM_RATE_LIMIT_OVERALL,
         group_max_rate=TELEGRAM_RATE_LIMIT_GROUP,
-        max_rate=TELEGRAM_RATE_LIMIT_PER_CHAT,
     )
 
     context_types = ContextTypes(context=Context)
