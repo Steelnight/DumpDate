@@ -8,7 +8,7 @@ readme = "README.md"
 packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}, {include = "dump_date"}]
 
 [tool.poetry.dependencies]
-python = ">=3.12"
+python = ">=3.12,<4.0"
 icalendar = "^6.3.2"
 requests = "^2.32.5"
 python-telegram-bot = {extras = ["rate-limiter"], version = "^22.5"}
