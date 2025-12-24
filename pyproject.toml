@@ -2,7 +2,7 @@
 name = "DumpDate"
 version = "0.1.0"
 description = "DumpDate is a smart reminder bot that keeps track of the local garbage collection schedule in Dresden and notifies you before pickup."
-authors = ["Jules <you@example.com>"]
+authors = ["Kester"]
 license = "MIT"
 readme = "README.md"
 packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include = "dashboard"}, {include = "dump_date"}]
@@ -11,7 +11,7 @@ packages = [{include = "schedule_parser"}, {include = "telegram_bot"}, {include 
 python = ">=3.12"
 icalendar = "^6.3.2"
 requests = "^2.32.5"
-python-telegram-bot = "^22.5"
+python-telegram-bot = {extras = ["rate-limiter"], version = "^22.5"}
 thefuzz = "^0.22.1"
 holidays = "^0.85"
 
