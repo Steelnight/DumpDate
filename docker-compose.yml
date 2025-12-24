@@ -6,6 +6,7 @@ services:
     command: ["python", "-m", "dump_date.main", "build-cache"]
     volumes:
       - .:/app
+      - /app/.venv
     environment:
       - PYTHONUNBUFFERED=1
 
@@ -16,6 +17,7 @@ services:
     command: ["python", "-m", "dump_date.main", "bot"]
     volumes:
       - .:/app
+      - /app/.venv
     environment:
       - PYTHONUNBUFFERED=1
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
@@ -27,6 +29,7 @@ services:
       - "8080:8080"
     volumes:
       - .:/app
+      - /app/.venv
     environment:
       - PYTHONUNBUFFERED=1
       - FLASK_RUN_HOST=0.0.0.0
