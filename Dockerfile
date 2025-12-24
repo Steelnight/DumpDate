@@ -4,6 +4,9 @@ FROM python:3.14-slim as builder
 # Install poetry
 RUN pip install poetry
 
+# Force poetry to create the virtualenv in the project folder
+RUN poetry config virtualenvs.in-project true 
+
 # Set working directory
 WORKDIR /app
 
