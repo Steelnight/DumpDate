@@ -11,7 +11,7 @@ WORKDIR /app
 COPY poetry.lock pyproject.toml ./
 
 # Install dependencies
-RUN poetry install --no-root --no-dev
+RUN poetry install --no-root --without dev
 
 # Stage 2: Final Image
 FROM python:3.14-slim
