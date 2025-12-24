@@ -300,9 +300,6 @@ def setup_handlers(application: Application) -> None:
     application.add_handler(subscribe_conv)
     application.add_handler(unsubscribe_conv)
 
-    if __name__ == "__main__":
-        application.run_polling()
-
 
 def record_bot_start_time():
     """Records the bot's start time in the system_info table."""
@@ -346,9 +343,25 @@ async def main(facade_instance: WasteManagementFacade):
     # Setup handlers in bot_main
     setup_handlers(application)
 
+    # Manually start the application
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
+
+    logger.info("Bot started and polling...")
+
     # Run the schedulers and bot polling concurrently
-    await asyncio.gather(
-        scheduler(facade_instance, application),
-        facade_instance.smart_schedule_service.run_scheduler(),
-        application.run_polling(),
-    )
+    try:
+        await asyncio.gather(
+            scheduler(facade_instance, application),
+            facade_instance.smart_schedule_service.run_scheduler(),
+        )
+    except asyncio.CancelledError:
+        logger.info("Bot is stopping...")
+    finally:
+        # Gracefully stop the application
+        if application.updater.running:
+            await application.updater.stop()
+        if application.running:
+            await application.stop()
+            await application.shutdown()
