@@ -57,6 +57,9 @@ def build_address_database():
         conn = sqlite3.connect(ADDRESS_LOOKUP_DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
+            "DROP TABLE IF EXISTS addresses"
+        )
+        cursor.execute(
             "CREATE TABLE addresses (address TEXT PRIMARY KEY, address_id INTEGER NOT NULL)"
         )
         cursor.executemany("INSERT INTO addresses VALUES (?, ?)", address_data)
