@@ -19,7 +19,7 @@ def initialize_app():
     Initializes the application by setting up log database and the logging.
     """
     with PersistenceService() as persistence_service:
-    persistence_service.init_db()
+        persistence_service.init_db()
     
     setup_database_logging()
 
