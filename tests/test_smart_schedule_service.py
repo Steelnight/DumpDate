@@ -74,7 +74,8 @@ class TestSmartScheduleService(unittest.TestCase):
             self.schedule_service.download_and_parse_schedule.call_count, 2
         )
         self.assertEqual(self.persistence_service.upsert_event.call_count, 2)
-        self.assertEqual(self.persistence_service.__enter__.call_count, 2)
+        # Expected call count increased by 1 due to wrapping get_unique_subscribed_locations
+        self.assertEqual(self.persistence_service.__enter__.call_count, 3)
 
     @patch("schedule_parser.services.smart_schedule_service.date", MockDate)
     def test_update_all_schedules_filters_holidays_and_past_dates(self):
@@ -124,7 +125,8 @@ class TestSmartScheduleService(unittest.TestCase):
         self.smart_schedule_service.update_all_schedules()
 
         self.schedule_service.download_and_parse_schedule.assert_called_once()
-        self.persistence_service.__enter__.assert_called_once()
+        # Expected call count is 2: 1 for fetching locations + 1 for upserting events
+        self.assertEqual(self.persistence_service.__enter__.call_count, 2)
         self.persistence_service.upsert_event.assert_called_once()
 
         upserted_event = self.persistence_service.upsert_event.call_args[0][0]

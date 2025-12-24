@@ -38,7 +38,10 @@ class SmartScheduleService:
         Orchestrates the update process for all unique subscribed locations.
         """
         logger.info("Starting smart schedule update for all subscribed locations.")
-        unique_locations = self.persistence_service.get_unique_subscribed_locations()
+        with self.persistence_service:
+            unique_locations = (
+                self.persistence_service.get_unique_subscribed_locations()
+            )
 
         if not unique_locations:
             logger.info("No subscribed locations found. Skipping schedule update.")
