@@ -16,12 +16,12 @@ from .logging_config import setup_database_logging
 
 def initialize_app():
     """
-    Initializes the application by setting up logging and the database.
+    Initializes the application by setting up log database and the logging.
     """
-    setup_database_logging()
-    # Initialize the main database
     with PersistenceService() as persistence_service:
-        persistence_service.init_db()
+    persistence_service.init_db()
+    
+    setup_database_logging()
 
 
 def create_facade() -> WasteManagementFacade:
