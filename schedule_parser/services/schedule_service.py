@@ -84,8 +84,24 @@ class ScheduleService:
         try:
             response = requests.get(ICAL_API_URL, params=params, timeout=10)
             response.raise_for_status()
+            content = response.text
+
+            # Validate that the content is actually an iCal file
+            if "BEGIN:VCALENDAR" not in content:
+                # Attempt to extract a cleaner error message if it's HTML
+                clean_message = content.strip()
+                if "<html" in content.lower() or "<body" in content.lower():
+                    # Simple regex to strip HTML tags
+                    clean_message = re.sub(r"<[^>]+>", "", content).strip()
+                    # Collapse multiple spaces/newlines
+                    clean_message = re.sub(r"\s+", " ", clean_message)
+
+                raise DownloadError(
+                    f"Invalid iCal content received for STANDORT {standort_id}. Server message: '{clean_message}'"
+                )
+
             logger.info(f"Successfully downloaded iCal data for STANDORT {standort_id}")
-            return response.text
+            return content
         except requests.exceptions.RequestException as e:
             raise DownloadError(
                 f"Error downloading iCal file for STANDORT {standort_id}: {e}"

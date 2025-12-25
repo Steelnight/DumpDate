@@ -119,13 +119,36 @@ def test_download_http_error_raises_download_error(mock_requests_get):
 
 
 @patch("schedule_parser.services.schedule_service.requests.get")
-def test_parsing_failure_raises_parsing_error(mock_requests_get):
+def test_invalid_content_raises_download_error(mock_requests_get):
     """
-    Tests that a ParsingError is raised for invalid ICS content.
+    Tests that a DownloadError is raised for content that is not an ICS file.
     """
     # Arrange
     mock_response = MagicMock()
     mock_response.text = "INVALID ICS CONTENT"
+    mock_requests_get.return_value = mock_response
+
+    service = ScheduleService()
+
+    # Act & Assert
+    with pytest.raises(DownloadError):
+        service.download_and_parse_schedule(
+            standort_id=1,
+            start_date=date(2023, 1, 1),
+            end_date=date(2023, 12, 31),
+            original_address="Test Straße 1",
+        )
+
+
+@patch("schedule_parser.services.schedule_service.requests.get")
+def test_malformed_ical_raises_parsing_error(mock_requests_get):
+    """
+    Tests that a ParsingError is raised for malformed ICS content.
+    """
+    # Arrange
+    mock_response = MagicMock()
+    # Passes the BEGIN:VCALENDAR check but fails parsing
+    mock_response.text = "BEGIN:VCALENDAR\nINVALID LINE"
     mock_requests_get.return_value = mock_response
 
     service = ScheduleService()
