@@ -25,7 +25,7 @@ This command will:
 *   Build the Docker image for the application.
 *   Run the `build_cache.py` script to create the address database.
 *   Start the Telegram bot.
-*   Start the web dashboard, which will be accessible at `http://localhost:5000`.
+*   Start the web dashboard, which will be accessible at `http://localhost:8080`.
 
 # Features
 
