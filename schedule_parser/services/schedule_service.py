@@ -6,7 +6,7 @@ import logging
 import re
 import time
 from datetime import date
-from typing import List
+from typing import List, Optional
 
 import requests
 from icalendar import Calendar
@@ -58,7 +58,7 @@ class ScheduleService:
         for attempt in range(self.max_retries):
             try:
                 ics_text = self._download_ical_text(standort_id, start_date, end_date)
-                events = self._parse_ics(ics_text, original_address)
+                events = self._parse_ics(ics_text, original_address, standort_id)
                 return events
             except (DownloadError, ParsingError) as e:
                 logger.warning(
@@ -71,6 +71,33 @@ class ScheduleService:
                     raise
                 time.sleep(self.retry_delay)
         return []  # Should be unreachable
+
+    def get_address_from_id(self, standort_id: int) -> Optional[str]:
+        """
+        Downloads the schedule for the current year to extract the address name.
+
+        Args:
+            standort_id: The ID of the location (STANDORT).
+
+        Returns:
+            The address name found in the iCal file, or None if not found or error.
+        """
+        today = date.today()
+        # Fetch for the whole current year to ensure we find at least one event
+        start_date = date(today.year, 1, 1)
+        end_date = date(today.year, 12, 31)
+
+        try:
+            ics_text = self._download_ical_text(standort_id, start_date, end_date)
+            # Parse with a dummy address since we are looking for it
+            events = self._parse_ics(ics_text, "Unknown", standort_id)
+            if events:
+                # Return the location from the first event
+                return events[0].location
+        except (DownloadError, ParsingError) as e:
+            logger.warning(f"Failed to get address from ID {standort_id}: {e}")
+            return None
+        return None
 
     def _download_ical_text(
         self, standort_id: int, start_date: date, end_date: date
@@ -107,7 +134,7 @@ class ScheduleService:
                 f"Error downloading iCal file for STANDORT {standort_id}: {e}"
             ) from e
 
-    def _parse_ics(self, ics_text: str, original_address: str) -> List[WasteEvent]:
+    def _parse_ics(self, ics_text: str, original_address: str, address_id: int) -> List[WasteEvent]:
         """Parse an ICS file and return a list of WasteEvent objects."""
         events = []
         try:
@@ -159,6 +186,7 @@ class ScheduleService:
                         contact_name=contact_name,
                         contact_phone=contact_phone,
                         original_address=original_address,
+                        address_id=address_id
                     )
                 )
             except Exception as e:

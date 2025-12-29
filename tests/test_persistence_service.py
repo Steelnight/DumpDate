@@ -38,7 +38,7 @@ def test_init_db_creates_tables(temp_main_db):
 def test_upsert_event_insert(temp_main_db):
     """Tests inserting a new event."""
     service = PersistenceService(db_path=temp_main_db)
-    event = WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr")
+    event = WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr", 123)
 
     with service as p:
         p.upsert_event(event)
@@ -53,9 +53,9 @@ def test_upsert_event_insert(temp_main_db):
 def test_upsert_event_update(temp_main_db):
     """Tests updating an existing event."""
     service = PersistenceService(db_path=temp_main_db)
-    event1 = WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr1")
+    event1 = WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr1", 123)
     event2 = WasteEvent(
-        "uid1", "2023-10-28", "loc", "Bio", "", "", "addr2"
+        "uid1", "2023-10-28", "loc", "Bio", "", "", "addr2", 123
     )  # Same UID, different data
 
     with service as p:
@@ -79,10 +79,11 @@ def test_subscription_workflow(temp_main_db):
 
     with service as p:
         # Create
-        p.create_subscription(chat_id=123, address_id=456, notification_time="evening")
+        p.create_subscription(chat_id=123, address_id=456, address_name="Home", notification_time="evening")
         subs = p.get_subscriptions_by_chat_id(123)
         assert len(subs) == 1
         sub_id = subs[0]["id"]
+        assert subs[0]["address_name"] == "Home"
 
         # Deactivate (soft delete)
         p.deactivate_subscription(sub_id)
@@ -90,10 +91,11 @@ def test_subscription_workflow(temp_main_db):
         assert len(subs) == 0
 
         # Reactivate
-        p.reactivate_subscription(sub_id, "morning")
+        p.reactivate_subscription(sub_id, "New Home", "morning")
         subs = p.get_subscriptions_by_chat_id(123)
         assert len(subs) == 1
         assert subs[0]["notification_time"] == "morning"
+        assert subs[0]["address_name"] == "New Home"
 
         # Notification logging
         log_id = p.create_notification_log(sub_id, "pending")

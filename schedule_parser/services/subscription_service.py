@@ -14,15 +14,15 @@ class SubscriptionService:
         self.persistence = persistence_service
 
     def add_or_reactivate_subscription(
-        self, chat_id: int, address_id: int, notification_time: str
+        self, chat_id: int, address_id: int, address_name: str, notification_time: str
     ) -> None:
         """Adds a new subscription or reactivates an existing one."""
         with self.persistence as p:
             existing_sub = p.find_subscription_by_chat_and_address(chat_id, address_id)
             if existing_sub:
-                p.reactivate_subscription(existing_sub["id"], notification_time)
+                p.reactivate_subscription(existing_sub["id"], address_name, notification_time)
             else:
-                p.create_subscription(chat_id, address_id, notification_time)
+                p.create_subscription(chat_id, address_id, address_name, notification_time)
 
     def get_user_subscriptions(self, chat_id: int) -> List[dict]:
         """Retrieves all active subscriptions for a given user."""

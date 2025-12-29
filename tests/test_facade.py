@@ -15,7 +15,7 @@ from schedule_parser.models import WasteEvent
 @pytest.fixture
 def mock_services():
     return {
-        "address_service": MagicMock(),
+        # AddressService is removed
         "schedule_service": MagicMock(),
         "persistence_service": MagicMock(),
         "subscription_service": MagicMock(),
@@ -30,14 +30,12 @@ def test_subscribe_address_for_user_success(mock_services):
     """
     # Arrange
     facade = WasteManagementFacade(**mock_services)
-    mock_address_service = mock_services["address_service"]
     mock_schedule_service = mock_services["schedule_service"]
     mock_persistence_service = mock_services["persistence_service"]
     mock_subscription_service = mock_services["subscription_service"]
 
-    mock_address_service.get_address_id.return_value = 123
     mock_schedule_service.download_and_parse_schedule.return_value = [
-        WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr")
+        WasteEvent("uid1", "2023-10-27", "loc", "Rest", "", "", "addr", 123)
     ]
 
     # Use the persistence service as a context manager
@@ -45,35 +43,16 @@ def test_subscribe_address_for_user_success(mock_services):
 
     # Act
     result = facade.subscribe_address_for_user(
-        chat_id=999, address="Test Straße 1", notification_time="evening"
+        chat_id=999, address_id=123, address_name="Home", notification_time="evening"
     )
 
     # Assert
     assert result is True
-    mock_address_service.get_address_id.assert_called_once_with("Test Straße 1")
     mock_schedule_service.download_and_parse_schedule.assert_called_once()
     mock_persistence_instance.upsert_event.assert_called_once()
     mock_subscription_service.add_or_reactivate_subscription.assert_called_once_with(
-        chat_id=999, address_id=123, notification_time="evening"
+        chat_id=999, address_id=123, address_name="Home", notification_time="evening"
     )
-
-
-def test_subscribe_address_not_found_raises_error(mock_services):
-    """
-    Tests that a ValueError is raised if the address is not found.
-    (Expected Failure Test)
-    """
-    # Arrange
-    facade = WasteManagementFacade(**mock_services)
-    mock_address_service = mock_services["address_service"]
-    mock_address_service.get_address_id.side_effect = ValueError("Address not found")
-
-    # Act & Assert
-    with pytest.raises(ValueError, match="Address not found"):
-        facade.subscribe_address_for_user(
-            chat_id=999, address="Unknown Straße", notification_time="evening"
-        )
-
 
 def test_subscribe_unexpected_error_is_handled_gracefully(mock_services):
     """
@@ -82,7 +61,6 @@ def test_subscribe_unexpected_error_is_handled_gracefully(mock_services):
     """
     # Arrange
     facade = WasteManagementFacade(**mock_services)
-    mock_address_service = mock_services["address_service"]
     mock_persistence_service = mock_services["persistence_service"]
     # Simulate a generic, unexpected error during the DB save
     mock_persistence_service.__enter__.side_effect = Exception(
@@ -91,13 +69,12 @@ def test_subscribe_unexpected_error_is_handled_gracefully(mock_services):
 
     # Act
     result = facade.subscribe_address_for_user(
-        chat_id=999, address="Test Straße 1", notification_time="evening"
+        chat_id=999, address_id=123, address_name="Home", notification_time="evening"
     )
 
     # Assert
     assert result is False
-    # Ensure get_address_id was called, but the process stopped before subscription
-    mock_address_service.get_address_id.assert_called_once()
+    # Ensure add_or_reactivate_subscription was not called
     mock_services[
         "subscription_service"
     ].add_or_reactivate_subscription.assert_not_called()
@@ -117,5 +94,5 @@ def test_subscribe_download_error_is_raised(mock_services):
     # Act & Assert
     with pytest.raises(DownloadError, match="Network timeout"):
         facade.subscribe_address_for_user(
-            chat_id=999, address="Test Straße 1", notification_time="evening"
+            chat_id=999, address_id=123, address_name="Home", notification_time="evening"
         )

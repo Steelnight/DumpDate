@@ -2,7 +2,6 @@ import argparse
 import asyncio
 import logging
 
-from schedule_parser.address_cache import build_address_database
 from telegram_bot.bot import main as run_bot
 from .app_factory import create_facade, initialize_app
 
@@ -16,15 +15,10 @@ def main():
     parser = argparse.ArgumentParser(description="DumpDate application runner.")
     parser.add_argument(
         "command",
-        choices=["bot", "dashboard", "build-cache"],
+        choices=["bot", "dashboard"],
         help="The command to execute.",
     )
     args = parser.parse_args()
-
-    if args.command == "build-cache":
-        logger.info("Building address cache...")
-        build_address_database()
-        return
 
     facade = create_facade()
 

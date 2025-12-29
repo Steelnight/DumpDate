@@ -12,7 +12,6 @@ from telegram.ext import (AIORateLimiter, Application, CommandHandler,
                           ContextTypes, ConversationHandler, MessageHandler,
                           filters)
 
-from schedule_parser.address_cache import build_address_database
 from schedule_parser.config import (TELEGRAM_BOT_TOKEN,
                                     TELEGRAM_RATE_LIMIT_GROUP,
                                     TELEGRAM_RATE_LIMIT_OVERALL,
@@ -28,7 +27,8 @@ from .scheduler import scheduler
 logger = logging.getLogger(__name__)
 
 # States for conversation
-ADDRESS, CONFIRM_ADDRESS, NOTIFICATION_TIME, SELECT_SUB = range(4)
+# ADDRESS removed. New flow: LOCATION_ID -> NAME_CHOICE -> (CUSTOM_NAME) -> NOTIFICATION_TIME
+LOCATION_ID, NAME_CHOICE, CUSTOM_NAME, NOTIFICATION_TIME, SELECT_SUB = range(5)
 
 Context = CustomContext
 
@@ -36,71 +36,94 @@ Context = CustomContext
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """Sends a welcome message."""
     await update.message.reply_text(
-        "Hallo! Ich bin der DumpDate-Bot. Nutze /subscribe, um eine neue Adresse zu abonnieren."
+        "Hallo! Ich bin der DumpDate-Bot. Nutze /subscribe, um einen neuen Standort zu abonnieren."
     )
 
 
 async def subscribe(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
     """Starts the subscription conversation."""
     await update.message.reply_text(
-        "Bitte gib deine Adresse ein (z.B. 'Test Straße 1')."
+        "Bitte gib die Standort-ID ein (z.B. 54367).\n"
+        "Die ID findest du über die Webseite der Stadt Dresden oder wie in der Dokumentation beschrieben."
     )
-    return ADDRESS
+    return LOCATION_ID
 
 
-async def handle_address_input(update: Update, context: Context) -> int:
-    """Handles the user's address input and suggests matches."""
+async def handle_location_id_input(update: Update, context: Context) -> int:
+    """Handles the user's location ID input and verifies it."""
     try:
-        matches = context.facade.find_address_matches(update.message.text)
-        if not matches:
-            await update.message.reply_text(
-                "Leider konnte keine passende Adresse gefunden werden. Bitte versuche es erneut."
+        location_id_str = update.message.text.strip()
+        if not location_id_str.isdigit():
+             await update.message.reply_text(
+                "Bitte gib eine gültige Zahl als Standort-ID ein."
             )
-            return ADDRESS
+             return LOCATION_ID
 
-        context.user_data["matches"] = {
-            match[0]: match[1] for match in matches
-        }  # Store as dict {address_str: address_id}
+        location_id = int(location_id_str)
 
-        reply_keyboard = [[match[0]] for match in matches]
+        await update.message.reply_text("Überprüfe ID...")
+
+        # Verify and fetch address name
+        address_name = context.facade.verify_location_id(location_id)
+
+        if not address_name:
+            await update.message.reply_text(
+                "Die ID konnte nicht verifiziert werden oder es wurden keine Daten gefunden. "
+                "Bitte überprüfe die ID und versuche es erneut."
+            )
+            return LOCATION_ID
+
+        context.user_data["selected_location_id"] = location_id
+        context.user_data["detected_address_name"] = address_name
+
+        reply_keyboard = [["Ja, behalten", "Nein, ändern"]]
         await update.message.reply_text(
-            "Ich habe folgende Adressen gefunden. Bitte wähle die richtige aus:",
+            f"Gefundene Adresse: '{address_name}'.\nMöchtest du diesen Namen behalten?",
             reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
         )
-        return CONFIRM_ADDRESS
-    except FileNotFoundError:
-        await update.message.reply_text(
-            "Fehler: Die Adress-Datenbank wurde nicht gefunden. Bitte den Administrator informieren."
-        )
-        return ConversationHandler.END
+        return NAME_CHOICE
+
     except Exception as e:
-        logger.error(f"Error in handle_address_input: {e}")
+        logger.error(f"Error in handle_location_id_input: {e}")
         await update.message.reply_text(
             "Ein unerwarteter Fehler ist aufgetreten. Bitte versuche es später erneut."
         )
         return ConversationHandler.END
 
 
-async def confirm_address(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-    """Handles address confirmation and asks for notification time."""
-    selected_address = update.message.text
-    matches = context.user_data.get("matches", {})
+async def handle_name_choice(update: Update, context: Context) -> int:
+    """Handles the user's choice about the address name."""
+    choice = update.message.text
 
-    if selected_address not in matches:
+    if choice == "Ja, behalten":
+        context.user_data["final_address_name"] = context.user_data["detected_address_name"]
+        return await ask_notification_time(update, context)
+    elif choice == "Nein, ändern":
         await update.message.reply_text(
-            "Ungültige Auswahl. Bitte wähle eine der vorgeschlagenen Adressen."
+            "Bitte gib den gewünschten Namen für diesen Standort ein:",
+            reply_markup=ReplyKeyboardRemove()
         )
-        # Resend options
-        reply_keyboard = [[addr] for addr in matches.keys()]
+        return CUSTOM_NAME
+    else:
         await update.message.reply_text(
-            "Bitte wähle die richtige aus:",
-            reply_markup=ReplyKeyboardMarkup(reply_keyboard, one_time_keyboard=True),
+            "Bitte wähle eine der Optionen.",
+             reply_markup=ReplyKeyboardMarkup([["Ja, behalten", "Nein, ändern"]], one_time_keyboard=True)
         )
-        return CONFIRM_ADDRESS
+        return NAME_CHOICE
 
-    context.user_data["selected_address_str"] = selected_address
-    context.user_data["selected_address_id"] = matches[selected_address]
+async def handle_custom_name(update: Update, context: Context) -> int:
+    """Handles the input of a custom name."""
+    custom_name = update.message.text.strip()
+    if not custom_name:
+         await update.message.reply_text("Der Name darf nicht leer sein. Bitte versuche es erneut.")
+         return CUSTOM_NAME
 
+    context.user_data["final_address_name"] = custom_name
+    return await ask_notification_time(update, context)
+
+
+async def ask_notification_time(update: Update, context: Context) -> int:
+    """Asks for notification time."""
     reply_keyboard = [["Abend vorher (19 Uhr)", "Morgen der Abholung (6 Uhr)"]]
     await update.message.reply_text(
         "Wann möchtest du benachrichtigt werden?",
@@ -114,17 +137,20 @@ async def set_notification_time(update: Update, context: Context) -> int:
     notification_choice = update.message.text
     notification_time = "evening" if "Abend" in notification_choice else "morning"
     chat_id = update.message.chat_id
-    address_str = context.user_data["selected_address_str"]
+
+    location_id = context.user_data["selected_location_id"]
+    address_name = context.user_data["final_address_name"]
 
     await update.message.reply_text(
-        f"Richte Abonnement für '{address_str}' ein. Das kann einen Moment dauern...",
+        f"Richte Abonnement für '{address_name}' (ID: {location_id}) ein...",
         reply_markup=ReplyKeyboardRemove(),
     )
 
     try:
         success = context.facade.subscribe_address_for_user(
             chat_id=chat_id,
-            address=address_str,
+            address_id=location_id,
+            address_name=address_name,
             notification_time=notification_time,
         )
         if success:
@@ -161,7 +187,8 @@ async def my_subscriptions(update: Update, context: Context) -> None:
 
     message = "Deine aktiven Benachrichtigungen:\n\n"
     for sub in subscriptions:
-        address = context.facade.get_address_by_id(sub["address_id"])
+        # Use address_name if available, otherwise fetch from ID (or fallback)
+        address = sub["address_name"] or context.facade.get_address_by_id(sub["address_id"])
         time_str = (
             "Abend vorher"
             if sub["notification_time"] == "evening"
@@ -182,7 +209,7 @@ async def unsubscribe(update: Update, context: Context) -> int:
         return ConversationHandler.END
 
     context.user_data["subscriptions"] = {
-        f"{context.facade.get_address_by_id(sub['address_id'])}": sub["id"]
+        f"{sub['address_name'] or context.facade.get_address_by_id(sub['address_id'])}": sub["id"]
         for sub in subscriptions
     }
 
@@ -268,11 +295,14 @@ def setup_handlers(application: Application) -> None:
     subscribe_conv = ConversationHandler(
         entry_points=[CommandHandler("subscribe", subscribe)],
         states={
-            ADDRESS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_address_input)
+            LOCATION_ID: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_location_id_input)
             ],
-            CONFIRM_ADDRESS: [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, confirm_address)
+            NAME_CHOICE: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_name_choice)
+            ],
+            CUSTOM_NAME: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, handle_custom_name)
             ],
             NOTIFICATION_TIME: [
                 MessageHandler(filters.TEXT & ~filters.COMMAND, set_notification_time)

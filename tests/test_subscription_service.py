@@ -15,10 +15,10 @@ def test_add_or_reactivate_subscription_new():
     )
     service = SubscriptionService(persistence_service=mock_persistence)
 
-    service.add_or_reactivate_subscription(1, 10, "evening")
+    service.add_or_reactivate_subscription(1, 10, "Home", "evening")
 
     mock_persistence.__enter__.return_value.create_subscription.assert_called_once_with(
-        1, 10, "evening"
+        1, 10, "Home", "evening"
     )
     mock_persistence.__enter__.return_value.reactivate_subscription.assert_not_called()
 
@@ -31,9 +31,9 @@ def test_add_or_reactivate_subscription_existing():
     }
     service = SubscriptionService(persistence_service=mock_persistence)
 
-    service.add_or_reactivate_subscription(1, 10, "morning")
+    service.add_or_reactivate_subscription(1, 10, "Home", "morning")
 
     mock_persistence.__enter__.return_value.create_subscription.assert_not_called()
     mock_persistence.__enter__.return_value.reactivate_subscription.assert_called_once_with(
-        99, "morning"
+        99, "Home", "morning"
     )
