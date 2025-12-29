@@ -2,12 +2,9 @@ import argparse
 import asyncio
 import logging
 
-from schedule_parser.address_cache import build_address_database
 from telegram_bot.bot import main as run_bot
+from dashboard.app import run_dashboard
 from .app_factory import create_facade, initialize_app
-
-# DELETE the global import:
-# from dashboard.app import run_dashboard 
 
 logger = logging.getLogger(__name__)
 
@@ -16,15 +13,10 @@ def main():
     parser = argparse.ArgumentParser(description="DumpDate application runner.")
     parser.add_argument(
         "command",
-        choices=["bot", "dashboard", "build-cache"],
+        choices=["bot", "dashboard"],
         help="The command to execute.",
     )
     args = parser.parse_args()
-
-    if args.command == "build-cache":
-        logger.info("Building address cache...")
-        build_address_database()
-        return
 
     facade = create_facade()
 
@@ -32,8 +24,6 @@ def main():
         logger.info("Starting bot...")
         asyncio.run(run_bot(facade))
     elif args.command == "dashboard":
-        # MOVE the import here:
-        from dashboard.app import run_dashboard
         logger.info("Starting dashboard...")
         run_dashboard(facade)
 

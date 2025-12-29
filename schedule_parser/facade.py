@@ -7,7 +7,6 @@ from datetime import date
 from typing import List, Optional
 
 from .exceptions import DownloadError, ParsingError
-from .services.address_service import AddressService
 from .services.notification_service import NotificationService
 from .services.persistence_service import PersistenceService
 from .services.schedule_service import ScheduleService
@@ -25,14 +24,12 @@ class WasteManagementFacade:
 
     def __init__(
         self,
-        address_service: AddressService,
         schedule_service: ScheduleService,
         persistence_service: PersistenceService,
         subscription_service: SubscriptionService,
         notification_service: NotificationService,
         smart_schedule_service: SmartScheduleService,
     ):
-        self.address_service = address_service
         self.schedule_service = schedule_service
         self.persistence_service = persistence_service
         self.subscription_service = subscription_service
@@ -40,67 +37,79 @@ class WasteManagementFacade:
         self.smart_schedule_service = smart_schedule_service
 
     def subscribe_address_for_user(
-        self, chat_id: int, address: str, notification_time: str
+        self, chat_id: int, address_id: int, address_name: str, notification_time: str
     ) -> bool:
         """
-        Subscribes a user to a given address.
+        Subscribes a user to a given address ID.
 
         This method handles the full workflow:
-        1. Finds the address ID.
-        2. Downloads the schedule.
-        3. Stores the schedule events.
-        4. Creates or updates the subscription.
+        1. Downloads the schedule (if not already cached or to verify).
+        2. Stores the schedule events.
+        3. Creates or updates the subscription with the custom name.
 
         Args:
             chat_id: The user's chat ID.
-            address: The address to subscribe to.
+            address_id: The location ID (STANDORT).
+            address_name: The name the user wants to give to this address.
             notification_time: The preferred notification time ('morning' or 'evening').
 
         Returns:
             True if the subscription was successful, False otherwise.
 
         Raises:
-            ValueError: If the address is not found.
-            FileNotFoundError: If the address database is missing.
             DownloadError: If the schedule download fails.
             ParsingError: If the schedule parsing fails.
         """
         try:
             logger.info(
-                f"Starting subscription for chat_id {chat_id} and address '{address}'."
+                f"Starting subscription for chat_id {chat_id}, ID {address_id}, Name '{address_name}'."
             )
 
-            # 1. Find address ID
-            address_id = self.address_service.get_address_id(address)
-
-            # 2. Download and parse schedule
+            # 1. Check if we already have the schedule for this year
             today = date.today()
-            end_of_year = date(today.year, 12, 31)
-            events = self.schedule_service.download_and_parse_schedule(
-                standort_id=address_id,
-                start_date=today,
-                end_date=end_of_year,
-                original_address=address,
-            )
+            year = today.year
 
-            # 3. Store events
+            # Check DB existence
+            data_exists = False
             with self.persistence_service as p:
-                for event in events:
-                    p.upsert_event(event)
+                data_exists = p.check_events_existence(address_id, year)
 
-            # 4. Create or update subscription
+            if data_exists:
+                logger.info(f"Schedule for location {address_id} (year {year}) already exists. Skipping download.")
+            else:
+                # Download and parse schedule if missing
+                end_of_year = date(year, 12, 31)
+
+                # We pass the address_name as original_address so events are tagged with it.
+                # Note: If multiple users use different names for the same ID,
+                # the last one might overwrite the 'original_address' field in events.
+                # This is acceptable as long as we can still find events.
+                events = self.schedule_service.download_and_parse_schedule(
+                    standort_id=address_id,
+                    start_date=today,
+                    end_date=end_of_year,
+                    original_address=address_name,
+                )
+
+                # Store events
+                with self.persistence_service as p:
+                    for event in events:
+                        p.upsert_event(event)
+
+            # 2. Create or update subscription
             self.subscription_service.add_or_reactivate_subscription(
                 chat_id=chat_id,
                 address_id=address_id,
+                address_name=address_name,
                 notification_time=notification_time,
             )
 
             logger.info(
-                f"Successfully subscribed chat_id {chat_id} to address '{address}'."
+                f"Successfully subscribed chat_id {chat_id} to ID {address_id} ('{address_name}')."
             )
             return True
 
-        except (ValueError, FileNotFoundError, DownloadError, ParsingError) as e:
+        except (ValueError, DownloadError, ParsingError) as e:
             # Expected errors that the caller (bot) can handle
             logger.warning(
                 f"A specific error occurred during subscription for chat_id {chat_id}: {e}"
@@ -109,9 +118,27 @@ class WasteManagementFacade:
         except Exception as e:
             # Unexpected errors
             logger.exception(
-                f"An unexpected error occurred during subscription for chat_id {chat_id} and address '{address}': {e}"
+                f"An unexpected error occurred during subscription for chat_id {chat_id} and ID {address_id}: {e}"
             )
             return False
+
+    def verify_location_id(self, location_id: int) -> Optional[str]:
+        """
+        Verifies if a location ID is valid and returns the address name found in the schedule.
+        """
+        # First, try to find the address name in our database to avoid unnecessary downloads
+        try:
+            with self.persistence_service as p:
+                address = p.get_location_name_from_events(location_id)
+                if address:
+                    logger.info(f"Address for ID {location_id} found in DB: {address}")
+                    return address
+        except Exception as e:
+            logger.warning(f"Failed to check DB for address ID {location_id}: {e}")
+
+        # If not found, download it
+        logger.info(f"Address for ID {location_id} not in DB. Downloading...")
+        return self.schedule_service.get_address_from_id(location_id)
 
     def get_user_subscriptions(self, chat_id: int) -> List[dict]:
         """Retrieves a user's active subscriptions."""
@@ -133,23 +160,8 @@ class WasteManagementFacade:
             )
             return False
 
-    def find_address_matches(self, query: str) -> List[tuple[str, int]]:
-        """Finds potential address matches for a given query."""
-        try:
-            return self.address_service.find_address_matches(query)
-        except FileNotFoundError:
-            # This is an expected error if the cache hasn't been built
-            raise
-        except Exception as e:
-            logger.exception(
-                f"An unexpected error occurred while finding address matches for query '{query}': {e}"
-            )
-            return []
-
     def get_address_by_id(self, address_id: int) -> Optional[str]:
         """Gets an address string by its ID."""
-        # This is a bit of a workaround, as the address string is not stored in the main DB.
-        # Ideally, the subscriptions table would store the address string directly.
         try:
             with self.persistence_service as p:
                 return p.get_address_by_id(address_id)
@@ -237,6 +249,7 @@ class WasteManagementFacade:
                     sub["address_id"], today
                 )
                 if event:
-                    address = self.get_address_by_id(sub["address_id"])
+                    # Use the name the user gave, or fallback to something else
+                    address = sub["address_name"] or self.get_address_by_id(sub["address_id"])
                     next_pickups.append({"address": address, "event": event})
         return next_pickups

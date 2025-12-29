@@ -5,7 +5,7 @@ This module defines the PersistenceService for database interactions.
 import sqlite3
 from typing import List, Optional
 
-from ..config import ADDRESS_LOOKUP_DB_PATH, WASTE_SCHEDULE_DB_PATH
+from ..config import WASTE_SCHEDULE_DB_PATH
 from ..models import WasteEvent
 
 
@@ -50,16 +50,25 @@ class PersistenceService:
                 contact_name TEXT,
                 contact_phone TEXT,
                 hash TEXT,
-                original_address TEXT
+                original_address TEXT,
+                address_id INTEGER
             )
         """
         )
+        # Attempt to add address_id column to waste_events if it doesn't exist
+        try:
+            cur.execute("ALTER TABLE waste_events ADD COLUMN address_id INTEGER")
+        except sqlite3.OperationalError:
+            # Column likely already exists
+            pass
+
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS subscriptions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 chat_id INTEGER NOT NULL,
                 address_id INTEGER NOT NULL,
+                address_name TEXT,
                 notification_time TEXT NOT NULL,
                 last_notified DATE,
                 is_active BOOLEAN DEFAULT 1,
@@ -68,6 +77,13 @@ class PersistenceService:
             )
         """
         )
+        # Attempt to add address_name column if it doesn't exist (migration for existing DBs)
+        try:
+            cur.execute("ALTER TABLE subscriptions ADD COLUMN address_name TEXT")
+        except sqlite3.OperationalError:
+            # Column likely already exists
+            pass
+
         cur.execute(
             """
             CREATE TABLE IF NOT EXISTS logs (
@@ -110,7 +126,7 @@ class PersistenceService:
         if row:
             if row[0] != event_hash:
                 cur.execute(
-                    "UPDATE waste_events SET date=?, location=?, waste_type=?, contact_name=?, contact_phone=?, hash=?, original_address=? WHERE uid=?",
+                    "UPDATE waste_events SET date=?, location=?, waste_type=?, contact_name=?, contact_phone=?, hash=?, original_address=?, address_id=? WHERE uid=?",
                     (
                         event.date,
                         event.location,
@@ -119,6 +135,7 @@ class PersistenceService:
                         event.contact_phone,
                         event_hash,
                         event.original_address,
+                        event.address_id,
                         event.uid,
                     ),
                 )
@@ -126,7 +143,7 @@ class PersistenceService:
             cur.execute("SELECT uid FROM waste_events WHERE hash = ?", (event_hash,))
             if not cur.fetchone():
                 cur.execute(
-                    "INSERT INTO waste_events (uid, date, location, waste_type, contact_name, contact_phone, hash, original_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    "INSERT INTO waste_events (uid, date, location, waste_type, contact_name, contact_phone, hash, original_address, address_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                     (
                         event.uid,
                         event.date,
@@ -136,6 +153,7 @@ class PersistenceService:
                         event.contact_phone,
                         event_hash,
                         event.original_address,
+                        event.address_id,
                     ),
                 )
 
@@ -151,30 +169,30 @@ class PersistenceService:
         return cur.fetchone()
 
     def reactivate_subscription(
-        self, subscription_id: int, notification_time: str
+        self, subscription_id: int, address_name: str, notification_time: str
     ) -> None:
         """Reactivates an existing subscription."""
         cur = self._get_cursor()
         cur.execute(
-            "UPDATE subscriptions SET is_active = 1, notification_time = ?, last_notified = NULL WHERE id = ?",
-            (notification_time, subscription_id),
+            "UPDATE subscriptions SET is_active = 1, address_name = ?, notification_time = ?, last_notified = NULL WHERE id = ?",
+            (address_name, notification_time, subscription_id),
         )
 
     def create_subscription(
-        self, chat_id: int, address_id: int, notification_time: str
+        self, chat_id: int, address_id: int, address_name: str, notification_time: str
     ) -> None:
         """Creates a new subscription."""
         cur = self._get_cursor()
         cur.execute(
-            "INSERT INTO subscriptions (chat_id, address_id, notification_time, last_notified) VALUES (?, ?, ?, NULL)",
-            (chat_id, address_id, notification_time),
+            "INSERT INTO subscriptions (chat_id, address_id, address_name, notification_time, last_notified) VALUES (?, ?, ?, ?, NULL)",
+            (chat_id, address_id, address_name, notification_time),
         )
 
     def get_subscriptions_by_chat_id(self, chat_id: int) -> List[dict]:
         """Retrieves all active subscriptions for a given chat_id."""
         cur = self._get_cursor()
         cur.execute(
-            "SELECT id, address_id, notification_time FROM subscriptions WHERE chat_id = ? AND is_active = 1",
+            "SELECT id, address_id, address_name, notification_time FROM subscriptions WHERE chat_id = ? AND is_active = 1",
             (chat_id,),
         )
         return cur.fetchall()
@@ -190,7 +208,7 @@ class PersistenceService:
         """Retrieves all active subscriptions from the database."""
         cur = self._get_cursor()
         cur.execute(
-            "SELECT id, chat_id, address_id, notification_time, last_notified FROM subscriptions WHERE is_active = 1"
+            "SELECT id, chat_id, address_id, address_name, notification_time, last_notified FROM subscriptions WHERE is_active = 1"
         )
         return cur.fetchall()
 
@@ -211,20 +229,19 @@ class PersistenceService:
         return cur.fetchall()
 
     def get_address_by_id(self, address_id: int) -> Optional[str]:
-        """Retrieves the address string for a given address_id from the address_lookup.db."""
-        # Note: This is a simplified example. In a real scenario, you might want to
-        # manage the connection to the address_lookup.db more carefully.
-        try:
-            conn = sqlite3.connect(ADDRESS_LOOKUP_DB_PATH)
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT address FROM addresses WHERE address_id = ?", (address_id,)
-            )
-            row = cur.fetchone()
-            conn.close()
-            return row[0] if row else None
-        except sqlite3.OperationalError:
-            return None  # Handle case where address_lookup.db does not exist
+        """
+        Retrieves an address string for a given address_id.
+        Since we no longer have a global address DB, we try to find a name from subscriptions
+        or fallback to 'Location <ID>'.
+        """
+        cur = self._get_cursor()
+        # Try to find any active subscription with this address_id to get a user-friendly name
+        cur.execute("SELECT address_name FROM subscriptions WHERE address_id = ? AND address_name IS NOT NULL LIMIT 1", (address_id,))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+
+        return f"Location {address_id}"
 
     def create_notification_log(self, subscription_id: int, status: str) -> int:
         """Creates a new notification log entry and returns its ID."""
@@ -259,34 +276,22 @@ class PersistenceService:
         Retrieves a list of unique locations (address and address_id)
         that have at least one active subscription.
         """
-        # This query joins the subscriptions with the address lookup table
-        # to get the necessary details for the schedule download.
-        # It requires attaching the address_lookup.db database.
         cur = self._get_cursor()
-
-        # Attach the address lookup database to the current connection
-        # to perform a cross-database query.
-        cur.execute(f"ATTACH DATABASE '{ADDRESS_LOOKUP_DB_PATH}' AS address_db")
 
         query = """
             SELECT DISTINCT
-                sub.address_id,
-                addr.address
+                address_id,
+                address_name as address
             FROM
-                main.subscriptions AS sub
-            JOIN
-                address_db.addresses AS addr ON sub.address_id = addr.address_id
+                subscriptions
             WHERE
-                sub.is_active = 1;
+                is_active = 1
+            GROUP BY address_id;
         """
 
         cur.execute(query)
-        locations = [dict(row) for row in cur.fetchall()]
-
-        # Detach the database after the query is complete.
-        cur.execute("DETACH DATABASE address_db")
-
-        return locations
+        # We pick one name for the address_id. Since we grouped by address_id, it will return one row per ID.
+        return [dict(row) for row in cur.fetchall()]
 
     def get_next_waste_event_for_subscription(
         self, address_id: int, today_date: str
@@ -295,16 +300,83 @@ class PersistenceService:
         Retrieves the next waste event for a given address_id that is on or after today's date.
         """
         cur = self._get_cursor()
+
+        # Now we can query by address_id directly
         cur.execute(
-            """
+             """
             SELECT * FROM waste_events
-            WHERE original_address = (
-                SELECT address FROM waste_events WHERE location LIKE ? LIMIT 1
-            ) AND date >= ?
+            WHERE address_id = ? AND date >= ?
             ORDER BY date ASC
             LIMIT 1
             """,
-            (f"%{address_id}%", today_date),
+            (address_id, today_date),
         )
         row = cur.fetchone()
         return dict(row) if row else None
+
+    def record_system_info(self, key: str, value: str) -> None:
+        """Records a key-value pair in the system_info table."""
+        # This method manages its own connection if one isn't already open,
+        # or uses the existing one. However, standard pattern here is 'with ...' usage.
+        # If called from outside a 'with' block, we need to handle connection.
+        # But 'PersistenceService' design expects usage within a context manager or explicit open.
+        # Given how it's used in bot.py (start time), it's a one-off.
+        # We'll allow it to open a temp connection if self._conn is None.
+
+        close_conn = False
+        if self._conn is None:
+             self._conn = sqlite3.connect(self.db_path)
+             self._cursor = self._conn.cursor()
+             close_conn = True
+
+        try:
+            cur = self._cursor
+            cur.execute(
+                "INSERT OR REPLACE INTO system_info (key, value) VALUES (?, ?)",
+                (key, value),
+            )
+            self._conn.commit()
+        finally:
+            if close_conn:
+                self._conn.close()
+                self._conn = None
+                self._cursor = None
+
+    def check_events_existence(self, address_id: int, year: int) -> bool:
+        """
+        Checks if waste events exist for a given address and year.
+
+        Args:
+            address_id: The location ID.
+            year: The year to check.
+
+        Returns:
+            True if at least one event exists, False otherwise.
+        """
+        cur = self._get_cursor()
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+
+        cur.execute(
+            "SELECT 1 FROM waste_events WHERE address_id = ? AND date BETWEEN ? AND ? LIMIT 1",
+            (address_id, start_date, end_date)
+        )
+        return cur.fetchone() is not None
+
+    def get_location_name_from_events(self, address_id: int) -> Optional[str]:
+        """
+        Retrieves the location name (address) from existing waste events.
+
+        Args:
+            address_id: The location ID.
+
+        Returns:
+            The address name if found, else None.
+        """
+        cur = self._get_cursor()
+        cur.execute(
+            "SELECT location FROM waste_events WHERE address_id = ? AND location IS NOT NULL AND location != '' LIMIT 1",
+            (address_id,)
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
