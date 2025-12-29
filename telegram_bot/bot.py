@@ -331,22 +331,20 @@ def setup_handlers(application: Application) -> None:
     application.add_handler(unsubscribe_conv)
 
 
-def record_bot_start_time():
+def record_bot_start_time(facade_instance: WasteManagementFacade):
     """Records the bot's start time in the system_info table."""
-    conn = sqlite3.connect(WASTE_SCHEDULE_DB_PATH)
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT OR REPLACE INTO system_info (key, value) VALUES (?, ?)",
-        ("bot_start_time", datetime.now().isoformat()),
-    )
-    conn.commit()
-    conn.close()
+    try:
+        facade_instance.persistence_service.record_system_info(
+            "bot_start_time", datetime.now().isoformat()
+        )
+    except Exception as e:
+        logger.error(f"Failed to record bot start time: {e}")
 
 
 async def main(facade_instance: WasteManagementFacade):
     """Initializes and runs the bot and scheduler."""
      # Record the bot start time
-    record_bot_start_time()
+    record_bot_start_time(facade_instance)
 
     if not TELEGRAM_BOT_TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN environment variable not set.")

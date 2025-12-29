@@ -65,27 +65,38 @@ class WasteManagementFacade:
                 f"Starting subscription for chat_id {chat_id}, ID {address_id}, Name '{address_name}'."
             )
 
-            # 1. Download and parse schedule
+            # 1. Check if we already have the schedule for this year
             today = date.today()
-            end_of_year = date(today.year, 12, 31)
+            year = today.year
 
-            # We pass the address_name as original_address so events are tagged with it.
-            # Note: If multiple users use different names for the same ID,
-            # the last one might overwrite the 'original_address' field in events.
-            # This is acceptable as long as we can still find events.
-            events = self.schedule_service.download_and_parse_schedule(
-                standort_id=address_id,
-                start_date=today,
-                end_date=end_of_year,
-                original_address=address_name,
-            )
-
-            # 2. Store events
+            # Check DB existence
+            data_exists = False
             with self.persistence_service as p:
-                for event in events:
-                    p.upsert_event(event)
+                data_exists = p.check_events_existence(address_id, year)
 
-            # 3. Create or update subscription
+            if data_exists:
+                logger.info(f"Schedule for location {address_id} (year {year}) already exists. Skipping download.")
+            else:
+                # Download and parse schedule if missing
+                end_of_year = date(year, 12, 31)
+
+                # We pass the address_name as original_address so events are tagged with it.
+                # Note: If multiple users use different names for the same ID,
+                # the last one might overwrite the 'original_address' field in events.
+                # This is acceptable as long as we can still find events.
+                events = self.schedule_service.download_and_parse_schedule(
+                    standort_id=address_id,
+                    start_date=today,
+                    end_date=end_of_year,
+                    original_address=address_name,
+                )
+
+                # Store events
+                with self.persistence_service as p:
+                    for event in events:
+                        p.upsert_event(event)
+
+            # 2. Create or update subscription
             self.subscription_service.add_or_reactivate_subscription(
                 chat_id=chat_id,
                 address_id=address_id,
@@ -115,6 +126,18 @@ class WasteManagementFacade:
         """
         Verifies if a location ID is valid and returns the address name found in the schedule.
         """
+        # First, try to find the address name in our database to avoid unnecessary downloads
+        try:
+            with self.persistence_service as p:
+                address = p.get_location_name_from_events(location_id)
+                if address:
+                    logger.info(f"Address for ID {location_id} found in DB: {address}")
+                    return address
+        except Exception as e:
+            logger.warning(f"Failed to check DB for address ID {location_id}: {e}")
+
+        # If not found, download it
+        logger.info(f"Address for ID {location_id} not in DB. Downloading...")
         return self.schedule_service.get_address_from_id(location_id)
 
     def get_user_subscriptions(self, chat_id: int) -> List[dict]:

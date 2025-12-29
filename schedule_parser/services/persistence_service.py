@@ -313,3 +313,70 @@ class PersistenceService:
         )
         row = cur.fetchone()
         return dict(row) if row else None
+
+    def record_system_info(self, key: str, value: str) -> None:
+        """Records a key-value pair in the system_info table."""
+        # This method manages its own connection if one isn't already open,
+        # or uses the existing one. However, standard pattern here is 'with ...' usage.
+        # If called from outside a 'with' block, we need to handle connection.
+        # But 'PersistenceService' design expects usage within a context manager or explicit open.
+        # Given how it's used in bot.py (start time), it's a one-off.
+        # We'll allow it to open a temp connection if self._conn is None.
+
+        close_conn = False
+        if self._conn is None:
+             self._conn = sqlite3.connect(self.db_path)
+             self._cursor = self._conn.cursor()
+             close_conn = True
+
+        try:
+            cur = self._cursor
+            cur.execute(
+                "INSERT OR REPLACE INTO system_info (key, value) VALUES (?, ?)",
+                (key, value),
+            )
+            self._conn.commit()
+        finally:
+            if close_conn:
+                self._conn.close()
+                self._conn = None
+                self._cursor = None
+
+    def check_events_existence(self, address_id: int, year: int) -> bool:
+        """
+        Checks if waste events exist for a given address and year.
+
+        Args:
+            address_id: The location ID.
+            year: The year to check.
+
+        Returns:
+            True if at least one event exists, False otherwise.
+        """
+        cur = self._get_cursor()
+        start_date = f"{year}-01-01"
+        end_date = f"{year}-12-31"
+
+        cur.execute(
+            "SELECT 1 FROM waste_events WHERE address_id = ? AND date BETWEEN ? AND ? LIMIT 1",
+            (address_id, start_date, end_date)
+        )
+        return cur.fetchone() is not None
+
+    def get_location_name_from_events(self, address_id: int) -> Optional[str]:
+        """
+        Retrieves the location name (address) from existing waste events.
+
+        Args:
+            address_id: The location ID.
+
+        Returns:
+            The address name if found, else None.
+        """
+        cur = self._get_cursor()
+        cur.execute(
+            "SELECT location FROM waste_events WHERE address_id = ? AND location IS NOT NULL AND location != '' LIMIT 1",
+            (address_id,)
+        )
+        row = cur.fetchone()
+        return row[0] if row else None
