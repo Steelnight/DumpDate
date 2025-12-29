@@ -40,6 +40,8 @@ def test_subscribe_address_for_user_success(mock_services):
 
     # Use the persistence service as a context manager
     mock_persistence_instance = mock_persistence_service.__enter__.return_value
+    # Simulate that events DO NOT exist in DB, triggering download
+    mock_persistence_instance.check_events_existence.return_value = False
 
     # Act
     result = facade.subscribe_address_for_user(
@@ -50,6 +52,37 @@ def test_subscribe_address_for_user_success(mock_services):
     assert result is True
     mock_schedule_service.download_and_parse_schedule.assert_called_once()
     mock_persistence_instance.upsert_event.assert_called_once()
+    mock_subscription_service.add_or_reactivate_subscription.assert_called_once_with(
+        chat_id=999, address_id=123, address_name="Home", notification_time="evening"
+    )
+
+def test_subscribe_address_for_user_already_cached(mock_services):
+    """
+    Tests the workflow when schedule is already cached in DB.
+    """
+    # Arrange
+    facade = WasteManagementFacade(**mock_services)
+    mock_schedule_service = mock_services["schedule_service"]
+    mock_persistence_service = mock_services["persistence_service"]
+    mock_subscription_service = mock_services["subscription_service"]
+
+    # Use the persistence service as a context manager
+    mock_persistence_instance = mock_persistence_service.__enter__.return_value
+    # Simulate that events DO exist in DB
+    mock_persistence_instance.check_events_existence.return_value = True
+
+    # Act
+    result = facade.subscribe_address_for_user(
+        chat_id=999, address_id=123, address_name="Home", notification_time="evening"
+    )
+
+    # Assert
+    assert result is True
+    # Should NOT download
+    mock_schedule_service.download_and_parse_schedule.assert_not_called()
+    # Should NOT upsert events
+    mock_persistence_instance.upsert_event.assert_not_called()
+    # Should STILL subscribe
     mock_subscription_service.add_or_reactivate_subscription.assert_called_once_with(
         chat_id=999, address_id=123, address_name="Home", notification_time="evening"
     )
@@ -87,6 +120,11 @@ def test_subscribe_download_error_is_raised(mock_services):
     # Arrange
     facade = WasteManagementFacade(**mock_services)
     mock_schedule_service = mock_services["schedule_service"]
+    mock_persistence_service = mock_services["persistence_service"]
+
+    mock_persistence_instance = mock_persistence_service.__enter__.return_value
+    mock_persistence_instance.check_events_existence.return_value = False
+
     mock_schedule_service.download_and_parse_schedule.side_effect = DownloadError(
         "Network timeout"
     )
